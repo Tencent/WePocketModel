@@ -86,7 +86,11 @@ If the player above is not rendered by your Markdown viewer, open the [MP4 demo]
 
 The same WePM-4B reads game frames and on-screen text, retrieves local knowledge and history, generates real-time suggestions, and performs option judgment or action routing for the current state — avoiding a separate vision model, retrieval model and decision model.
 
-<!-- TBD: demo video. -->
+<p align="center">
+  <video src="assert/game_assistant_demo.mp4" poster="assert/game_assistant_poster.jpg" width="380" controls muted loop playsinline></video>
+</p>
+
+If the player above is not rendered by your Markdown viewer, open the [MP4 demo](assert/game_assistant_demo.mp4) directly.
 
 ## Inference on NVIDIA GPU
 
