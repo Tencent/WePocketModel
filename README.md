@@ -17,7 +17,7 @@ WePM is a unified multimodal model built for on-device AI. Instead of keeping on
 - **Decision** — typed decision paths for option selection, ordinal scoring and binary judgment.
 
 <p align="center">
-  <img src="assert/wepm_function.png" width="78%" alt="WePM capabilities and applications">
+  <img src="assert/wepm_function.png" width="640" alt="WePM capabilities and applications">
 </p>
 
 Unifying these paths is not a matter of mixing datasets. When representation, generation and decision share one compact backbone, three conflicts appear: the visual granularity each task needs differs, the supervision each dataset provides is different, and the loss scales of the three tasks are not comparable. WePM addresses them with three designs:
@@ -27,7 +27,7 @@ Unifying these paths is not a matter of mixing datasets. When representation, ge
 - **SEMO (Stable and Efficient Multitask Optimization)** fixes task loss coefficients, schedules how often each task appears per round, and accumulates gradients across sequential forward/backward passes before a single update. This removes the need to keep all task computation graphs alive at once.
 
 <p align="center">
-  <img src="assert/last.png" width="82%" alt="WePM architecture">
+  <img src="assert/last.png" width="640" alt="WePM architecture">
 </p>
 
 ## Performance
@@ -59,7 +59,7 @@ $$
 Counting is done per capability family, not per benchmark: OCR, captioning and VQA all belong to Generation and are not counted three times.
 
 <p align="center">
-  <img src="assert/memory_vs_quality.png" width="62%" alt="Quality vs. memory trade-off">
+  <img src="assert/memory_vs_quality.png" width="640" alt="Quality vs. memory trade-off">
 </p>
 
 The figure above is an early slice of this comparison. It covers Generation and Representation only, and counts BF16 weights only — KV cache, activations, framework overhead and runtime fragmentation are excluded. In this setting, deploying Qwen3.5-4B and WeMM-Emb-4B separately requires ≈16 GB of BF16 weights and reaches an aggregate quality of 63.08; WePM reaches 63.12 with ≈8 GB. The independent composition closest in quality to WePM actually requires 24 GB, not 16 GB.
