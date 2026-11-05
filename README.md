@@ -75,7 +75,7 @@ Both demos run fully on device: no image, text or interaction data leaves the lo
 One WePM-4B handles the whole loop — retrieving local content, generating a reply grounded in personal information, and making the typed decision that routes the next step. Retrieval, generation and decision alternate inside a single resident model.
 
 <p align="center">
-  <video src="assert/personal_agent_demo.mp4" poster="assert/personal_agent_poster.jpg" width="420" controls muted loop playsinline></video>
+  <video src="assert/personal_agent_demo.mp4" poster="assert/personal_agent_poster.jpg" width="640" controls muted loop playsinline></video>
 </p>
 
 If the player above is not rendered by your Markdown viewer, open the [MP4 demo](assert/personal_agent_demo.mp4) directly.
@@ -87,7 +87,7 @@ If the player above is not rendered by your Markdown viewer, open the [MP4 demo]
 The same WePM-4B reads game frames and on-screen text, retrieves local knowledge and history, generates real-time suggestions, and performs option judgment or action routing for the current state — avoiding a separate vision model, retrieval model and decision model.
 
 <p align="center">
-  <video src="assert/game_assistant_demo.mp4" poster="assert/game_assistant_poster.jpg" width="380" controls muted loop playsinline></video>
+  <video src="assert/game_assistant_demo.mp4" poster="assert/game_assistant_poster.jpg" width="640" controls muted loop playsinline></video>
 </p>
 
 If the player above is not rendered by your Markdown viewer, open the [MP4 demo](assert/game_assistant_demo.mp4) directly.
