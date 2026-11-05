@@ -156,7 +156,7 @@ If you find this work useful, please consider citing it:
 ```bibtex
 @misc{wepm2026,
   title = {WePM: Hierarchical Conflict Reconciliation for Unified MLLMs},
-  author = {Yuan, Zhiqiang and Yan, Qiwei and Yang, Liwei and Liu, Jinzhe and Liu, Yang and Zhou, Jie and Zhang, Jinchao},
+  author = {{WeChat AI, Tencent}},
   year = {2026},
   howpublished = {Technical Report},
   url = {TBD}
