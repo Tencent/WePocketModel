@@ -1,4 +1,8 @@
-# WePM: A Unified Multimodal Model for On-Device Retrieval, Generation and Decision
+# WePM: Hierarchical Conflict Reconciliation for Unified MLLMs
+
+<p align="center">
+  <i>Unified Pocket Models for In-App Multimodal Intelligence</i>
+</p>
 
 <p align="center">
   <b>Model weights</b>: TBD &nbsp;|&nbsp; <b>Technical Report</b>: TBD &nbsp;|&nbsp; <b>Code & Evaluation</b>: TBD
@@ -151,8 +155,8 @@ If you find this work useful, please consider citing it:
 
 ```bibtex
 @misc{wepm2026,
-  title = {WePM: A Unified Multimodal Model for On-Device Retrieval, Generation and Decision},
-  author = {{Tencent WeChat WePM Team}},
+  title = {WePM: Hierarchical Conflict Reconciliation for Unified MLLMs},
+  author = {Yuan, Zhiqiang and Yan, Qiwei and Yang, Liwei and Liu, Jinzhe and Liu, Yang and Zhou, Jie and Zhang, Jinchao},
   year = {2026},
   howpublished = {Technical Report},
   url = {TBD}
