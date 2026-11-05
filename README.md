@@ -16,7 +16,9 @@ WePM is a unified multimodal model built for on-device AI. Instead of keeping on
 - **Generation** — OCR, image captioning, visual question answering, summarization and assistant replies.
 - **Decision** — typed decision paths for option selection, ordinal scoring and binary judgment.
 
-![WePM capabilities and applications](assert/wepm_function.png)
+<p align="center">
+  <img src="assert/wepm_function.png" width="78%" alt="WePM capabilities and applications">
+</p>
 
 Unifying these paths is not a matter of mixing datasets. When representation, generation and decision share one compact backbone, three conflicts appear: the visual granularity each task needs differs, the supervision each dataset provides is different, and the loss scales of the three tasks are not comparable. WePM addresses them with three designs:
 
@@ -24,7 +26,9 @@ Unifying these paths is not a matter of mixing datasets. When representation, ge
 - **ULKD (Unified Listwise Knowledge Distillation)** distills from two teachers — a generation teacher and a representation teacher — along the student's own generation trajectory, so unpaired retrieval and generation data can supervise one student.
 - **SEMO (Stable and Efficient Multitask Optimization)** fixes task loss coefficients, schedules how often each task appears per round, and accumulates gradients across sequential forward/backward passes before a single update. This removes the need to keep all task computation graphs alive at once.
 
-![WePM architecture](assert/last.png)
+<p align="center">
+  <img src="assert/last.png" width="82%" alt="WePM architecture">
+</p>
 
 ## Performance
 
@@ -54,7 +58,9 @@ $$
 
 Counting is done per capability family, not per benchmark: OCR, captioning and VQA all belong to Generation and are not counted three times.
 
-![Quality vs. memory trade-off](assert/memory_vs_quality.png)
+<p align="center">
+  <img src="assert/memory_vs_quality.png" width="62%" alt="Quality vs. memory trade-off">
+</p>
 
 The figure above is an early slice of this comparison. It covers Generation and Representation only, and counts BF16 weights only — KV cache, activations, framework overhead and runtime fragmentation are excluded. In this setting, deploying Qwen3.5-4B and WeMM-Emb-4B separately requires ≈16 GB of BF16 weights and reaches an aggregate quality of 63.08; WePM reaches 63.12 with ≈8 GB. The independent composition closest in quality to WePM actually requires 24 GB, not 16 GB.
 
@@ -68,7 +74,11 @@ Both demos run fully on device: no image, text or interaction data leaves the lo
 
 One WePM-4B handles the whole loop — retrieving local content, generating a reply grounded in personal information, and making the typed decision that routes the next step. Retrieval, generation and decision alternate inside a single resident model.
 
-[▶ Watch the Personal Agent demo (`.mov`)](assert/personal_agent_%E7%B4%A0%E6%9D%90.mov)
+<p align="center">
+  <video src="assert/personal_agent_demo.mp4" poster="assert/personal_agent_poster.jpg" width="420" controls muted loop playsinline></video>
+</p>
+
+If the player above is not rendered by your Markdown viewer, open the [MP4 demo](assert/personal_agent_demo.mp4) directly.
 
 <!-- TBD: capture device, memory footprint, precision and latency numbers for this demo. -->
 
