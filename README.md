@@ -34,13 +34,18 @@ Unifying these paths is not a matter of mixing datasets. When representation, ge
 
 Evaluation covers 16 benchmarks in five groups: image retrieval, text retrieval, math and science reasoning, visual question answering, and OCR / document understanding. All baselines were reproduced with identical input resolution and evaluation scripts. `Joint` is not a flat average over benchmarks: it first aggregates the Embedding and Generation groups separately, then averages the two group scores with equal weight.
 
-| Method | ImageRet. | TextRet. | Math | VQA | OCR | Joint |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| CAFe | 22.83 | 30.30 | 7.18 | 13.71 | 40.97 | 23.59 |
-| FROMAGe | 32.30 | 33.12 | 22.60 | 34.29 | 61.86 | 36.15 |
-| MMGen | 30.93 | 33.26 | 24.17 | 39.05 | 60.11 | 36.60 |
-| ULME | 34.13 | 32.78 | 28.16 | 41.46 | 58.93 | 38.15 |
-| **WePM** | **41.30** | **35.90** | **58.60** | **60.84** | **81.18** | **52.74** |
+<table align="center">
+  <thead>
+    <tr><th>Method</th><th>ImageRet.</th><th>TextRet.</th><th>Math</th><th>VQA</th><th>OCR</th><th>Joint</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CAFe</td><td>22.83</td><td>30.30</td><td>7.18</td><td>13.71</td><td>40.97</td><td>23.59</td></tr>
+    <tr><td>FROMAGe</td><td>32.30</td><td>33.12</td><td>22.60</td><td>34.29</td><td>61.86</td><td>36.15</td></tr>
+    <tr><td>MMGen</td><td>30.93</td><td>33.26</td><td>24.17</td><td>39.05</td><td>60.11</td><td>36.60</td></tr>
+    <tr><td>ULME</td><td>34.13</td><td>32.78</td><td>28.16</td><td>41.46</td><td>58.93</td><td>38.15</td></tr>
+    <tr><td><strong>WePM</strong></td><td><strong>41.30</strong></td><td><strong>35.90</strong></td><td><strong>58.60</strong></td><td><strong>60.84</strong></td><td><strong>81.18</strong></td><td><strong>52.74</strong></td></tr>
+  </tbody>
+</table>
 
 Against ULME, the strongest prior unified retrieval–generation baseline, WePM improves ImageRet. by +7.17, TextRet. by +2.64, Math by +30.44, VQA by +19.38 and OCR by +19.32, lifting `Joint` from 38.15 to 52.74 (+14.59). The gains are not concentrated in one group: the Embedding aggregate reaches 38.60 (ULME: 33.46) and the Generation aggregate reaches 66.87 (ULME: 42.85).
 
@@ -96,10 +101,15 @@ If the player above is not rendered by your Markdown viewer, open the [MP4 demo]
 
 An approximate memory budget for BF16 inference:
 
-| Precision | Weights | Recommended GPU memory |
-| --- | ---: | --- |
-| BF16 | ≈8 GB | ≥16 GB (e.g. RTX 4090 / A100) |
-| FP16 | ≈8 GB | ≥16 GB |
+<table align="center">
+  <thead>
+    <tr><th>Precision</th><th>Weights</th><th>Recommended GPU memory</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>BF16</td><td>≈8 GB</td><td>≥16 GB (e.g. RTX 4090 / A100)</td></tr>
+    <tr><td>FP16</td><td>≈8 GB</td><td>≥16 GB</td></tr>
+  </tbody>
+</table>
 
 Install dependencies:
 
@@ -158,10 +168,15 @@ print(answer)
 
 ## Model Links
 
-| Model | Description | Link |
-| --- | --- | --- |
-| WePM-4B | Unified retrieval / generation / decision model, BF16 | TBD |
-| WePM-4B (quantized) | Lower-bit on-device release | TBD |
+<table align="center">
+  <thead>
+    <tr><th>Model</th><th>Description</th><th>Link</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>WePM-4B</td><td>Unified retrieval / generation / decision model, BF16</td><td>TBD</td></tr>
+    <tr><td>WePM-4B (quantized)</td><td>Lower-bit on-device release</td><td>TBD</td></tr>
+  </tbody>
+</table>
 
 ## Citation
 
