@@ -57,9 +57,9 @@ Parameter count and per-benchmark scores do not answer the question that matters
 
 HCD is defined as:
 
-$$
-\mathrm{HCD} = \frac{\bigl(\text{number of capability families above the usability threshold}\bigr) \times \bigl(\text{aggregate capability quality}\bigr)}{\text{resident inference memory}}
-$$
+<p align="center">
+  <img src="assert/hcd_formula.png" width="640" alt="HCD = (number of capability families above the usability threshold) x (aggregate capability quality) / (resident inference memory)">
+</p>
 
 Counting is done per capability family, not per benchmark: OCR, captioning and VQA all belong to Generation and are not counted three times.
 
@@ -163,20 +163,6 @@ answer = processor.tokenizer.decode(
 )
 print(answer)
 ```
-
-<!-- TBD: add the embedding and typed-decision entry points (query/document encoding, choice / ordinal / binary heads) once the public interface is fixed. -->
-
-## Model Links
-
-<table align="center">
-  <thead>
-    <tr><th>Model</th><th>Description</th><th>Link</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>WePM-4B</td><td>Unified retrieval / generation / decision model, BF16</td><td>TBD</td></tr>
-    <tr><td>WePM-4B (quantized)</td><td>Lower-bit on-device release</td><td>TBD</td></tr>
-  </tbody>
-</table>
 
 ## Citation
 
