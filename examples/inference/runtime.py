@@ -1,0 +1,395 @@
+"""Transformers CPU/CUDA inference for the formal task_slots_v1 G/E/J model."""
+
+from __future__ import annotations
+
+import io
+import json
+import time
+from pathlib import Path
+
+import torch
+import torch.nn.functional as F
+from common import load_contracts, load_runtime_sources, validate_architecture
+from PIL import Image
+from safetensors.torch import load_file
+from transformers import AutoProcessor, Qwen3_5ForConditionalGeneration
+
+
+def load_images(paths, prepare_image):
+    """Apply the training-aligned RGB and longest-edge resize policy."""
+    images = []
+    for path in paths:
+        with Image.open(
+            io.BytesIO(path) if isinstance(path, bytes) else path
+        ) as original:
+            image = original.convert("RGB")
+        images.append(prepare_image(image))
+    return images
+
+
+def wait_for_gpu(min_free_gib=14, timeout=120):
+    """Wait for sufficient free CUDA memory before loading the model."""
+    probe = torch.empty(256 * 1024, device="cuda", dtype=torch.float32)
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        free, total = torch.cuda.mem_get_info()
+        if free >= min_free_gib * 2**30:
+            print(
+                f"CUDA ready: {free / 2**30:.1f}/{total / 2**30:.1f} GiB free",
+                flush=True,
+            )
+            return probe
+        time.sleep(2)
+    raise RuntimeError(
+        f"CUDA memory did not reach {min_free_gib} GiB free within {timeout}s"
+    )
+
+
+class UniModelTransformers:
+    """Qwen3.5 + MGVB + independent E/J slots and trained task heads.
+
+    Each call accepts one text/image request. Generation uses a KV/recurrent
+    cache and no slot. E reads the embedding slot and applies the normalized
+    projection; J reads its own slot and applies the direct candidate-index head.
+    """
+
+    def __init__(self, model_dir: str | Path, device="cuda:0"):
+        self.model_dir = Path(model_dir).resolve()
+        manifest = json.loads((self.model_dir / "export_complete.json").read_text())
+        if manifest.get("schema") != "wepm-nvidia-task-slots-v1":
+            raise ValueError("a complete WePM Hugging Face model directory is required")
+        self.config = json.loads((self.model_dir / "config.json").read_text())
+        c = self.config
+        self.contracts = load_contracts(self.model_dir / "runtime_sources")
+        self.decision_config = validate_architecture(c, self.contracts)
+        self.device = torch.device(device)
+        if self.device.type not in {"cpu", "cuda"}:
+            raise ValueError("supported inference devices are cpu and cuda")
+        # FP32 also works on CPUs without native BF16 instructions. CUDA keeps
+        # the BF16 path used by training and the verified NVIDIA example.
+        self.dtype = torch.float32 if self.device.type == "cpu" else torch.bfloat16
+        self.model, self.loading_info = Qwen3_5ForConditionalGeneration.from_pretrained(
+            self.model_dir,
+            dtype=self.dtype,
+            device_map={"": str(self.device)},
+            attn_implementation="sdpa",
+            local_files_only=True,
+            output_loading_info=True,
+        )
+        for key in ("missing_keys", "unexpected_keys", "mismatched_keys", "error_msgs"):
+            if self.loading_info.get(key):
+                raise ValueError(f"incomplete HF load: {key}={self.loading_info[key]}")
+        self.loading_info = {
+            key: sorted(value) if isinstance(value, set) else value
+            for key, value in self.loading_info.items()
+        }
+        self.model.eval()
+        self.processor = AutoProcessor.from_pretrained(
+            self.model_dir, local_files_only=True
+        )
+        if not self.processor.chat_template:
+            raise ValueError("missing saved training chat template")
+        self.processor.tokenizer.chat_template = self.processor.chat_template
+        self.slot_token_id = self.processor.tokenizer.pad_token_id
+        if self.slot_token_id is None:
+            self.slot_token_id = self.processor.tokenizer.eos_token_id
+        auxiliary = load_file(
+            self.model_dir / "unimodel_aux.safetensors", device=str(self.device)
+        )
+        self.slots = {
+            role: auxiliary.pop(f"unimodel.slot_pooler.{role}_slot").to(self.dtype)
+            for role in ("embedding", "decision")
+        }
+        self.head = auxiliary.pop("unimodel.embedding_head.weight").to(self.dtype)
+        self.decision_head = auxiliary.pop("unimodel.decision_head.output.weight").to(
+            self.dtype
+        )
+        hidden = c["text_config"]["hidden_size"]
+        if any(tuple(slot.shape) != (hidden,) for slot in self.slots.values()) or tuple(
+            self.head.shape
+        ) != (
+            c["unimodel_embedding_dim"],
+            hidden,
+        ):
+            raise ValueError("slot/head shape mismatch")
+        if tuple(self.decision_head.shape) != (
+            self.decision_config.output_size,
+            hidden,
+        ):
+            raise ValueError("direct decision head shape mismatch")
+        cls, self.get_rope_index = load_runtime_sources(
+            self.model_dir / "runtime_sources"
+        )
+        if not c.get("unimodel_mgvb_enable"):
+            raise ValueError(
+                "this example requires a UniModel checkpoint with MGVB enabled"
+            )
+        self.mgvb = cls(
+            hidden,
+            adapter_dim=c["unimodel_mgvb_adapter_dim"],
+            token_budget=c["unimodel_mgvb_token_budget"],
+            global_tokens=c["unimodel_mgvb_global_tokens"],
+            region_tokens=c["unimodel_mgvb_region_tokens"],
+            num_global_heads=c["unimodel_mgvb_num_global_heads"],
+            device=self.device,
+            dtype=self.dtype,
+        )
+        prefix = "unimodel.mgvb."
+        if any(not k.startswith(prefix) for k in auxiliary):
+            raise ValueError(f"unknown auxiliary weights: {sorted(auxiliary)}")
+        self.mgvb.load_state_dict(
+            {k.removeprefix(prefix): v for k, v in auxiliary.items()}, strict=True
+        )
+        self.mgvb.eval()
+
+    def _compact_image_tokens(self, ids, grids):
+        """Reserve exactly min(native length, MGVB budget) placeholders per image."""
+        merge = self.config["vision_config"]["spatial_merge_size"]
+        image_id = self.config["image_token_id"]
+        native_lengths = (grids.prod(-1) // merge**2).tolist()
+        compact_lengths = [min(int(n), self.mgvb.token_budget) for n in native_lengths]
+        indices = torch.nonzero(ids[0] == image_id).flatten()
+        spans = torch.split(indices, [int(n) for n in native_lengths])
+        keep = torch.ones(ids.shape[1], dtype=torch.bool, device=self.device)
+        for span, count in zip(spans, compact_lengths, strict=True):
+            if not torch.all(torch.diff(span) == 1):
+                raise ValueError("non-contiguous image placeholders")
+            keep[span[count:]] = False
+        return ids[:, keep], native_lengths, compact_lengths
+
+    def _text_query(self, ids, embeddings, slot_role):
+        """Build the training MGVB mean+last query from non-special prompt tokens."""
+        mask = torch.ones_like(ids, dtype=torch.bool)
+        for token_id in self.processor.tokenizer.all_special_ids:
+            mask &= ids != token_id
+        if slot_role is not None:
+            mask[:, -1] = False
+        count = mask.sum(dim=1)
+        if not int(count[0]):
+            return None
+        mean = (embeddings * mask.unsqueeze(-1)).sum(dim=1) / count.to(
+            self.dtype
+        ).unsqueeze(-1)
+        last = embeddings[:, torch.nonzero(mask[0]).flatten()[-1], :]
+        return torch.cat([mean, last], dim=-1)[0]
+
+    def _encode_images(self, pixels, grids, query):
+        """Run native ViT/merger, then the learned MGVB in image order."""
+        pixels = pixels.to(self.device, self.dtype)
+        patches = torch.split(pixels, [int(n) for n in grids.prod(-1).tolist()])
+        native_features = []
+        for patch, grid in zip(patches, grids, strict=True):
+            visual = self.model.model.get_image_features(
+                patch, grid.unsqueeze(0), return_dict=True
+            )
+            native_features.append(visual.pooler_output[0])
+        return self.mgvb(
+            native_features,
+            image_grid_thw=grids,
+            query_embeddings=[query] * len(native_features),
+            spatial_merge_size=self.config["vision_config"]["spatial_merge_size"],
+        )
+
+    @torch.inference_mode()
+    def _prepare_inputs(self, prompt: str, images, *, task: str):
+        if task not in {"generate", "embedding", "decision"}:
+            raise ValueError(f"unknown task: {task}")
+        generation = task == "generate"
+        slot_role = None if generation else task
+        if not prompt.strip() and not images:
+            raise ValueError("an image or nonempty prompt is required")
+        loaded_images = load_images(
+            images, self.contracts.image_geometry.prepare_model_image
+        )
+        content = [{"type": "image", "image": image} for image in loaded_images]
+        if prompt:
+            content.append({"type": "text", "text": prompt})
+        rendered = self.processor.apply_chat_template(
+            [{"role": "user", "content": content}],
+            tokenize=False,
+            add_generation_prompt=generation,
+            enable_thinking=False,
+        )
+        encoded = self.processor(
+            text=[rendered], images=loaded_images or None, return_tensors="pt"
+        )
+        ids = encoded["input_ids"].to(self.device)
+        if ids.shape[0] != 1:
+            raise ValueError("only unpadded single-request inference is supported")
+        if slot_role is not None:
+            ids = torch.cat(
+                [ids, torch.tensor([[self.slot_token_id]], device=self.device)], dim=1
+            )
+        grids = encoded.get("image_grid_thw")
+        positions, native_lengths, compact_lengths = [], [], []
+        if grids is not None:
+            grids = grids.to(self.device)
+            ids, native_lengths, compact_lengths = self._compact_image_tokens(
+                ids, grids
+            )
+        embeddings = self.model.get_input_embeddings()(ids)
+        # Only the appended position is a soft slot. Literal pad tokens in
+        # the prompt and generated tokens always retain native embeddings.
+        if slot_role is not None:
+            embeddings[:, -1, :] = self.slots[slot_role]
+        if grids is not None:
+            compressed = self._encode_images(
+                encoded["pixel_values"],
+                grids,
+                self._text_query(ids, embeddings, slot_role),
+            )
+            positions = compressed.positions
+            features = torch.cat(compressed.embeddings)
+            mask = ids[0] == self.config["image_token_id"]
+            if int(mask.sum()) != features.shape[0]:
+                raise ValueError("MGVB image-feature/placeholder mismatch")
+            embeddings[0, mask, :] = features.to(self.dtype)
+        rope, delta = self.get_rope_index(
+            spatial_merge_size=self.config["vision_config"]["spatial_merge_size"],
+            image_token_id=self.config["image_token_id"],
+            video_token_id=self.config["video_token_id"],
+            vision_start_token_id=self.config["vision_start_token_id"],
+            input_ids=ids,
+            image_grid_thw=grids,
+            image_position_ids=positions if grids is not None else None,
+            attention_mask=torch.ones_like(ids),
+        )
+        text_positions = torch.arange(ids.shape[1], device=self.device).view(1, 1, -1)
+        position_ids = torch.cat([text_positions, rope], dim=0)
+        metadata = {
+            "input_tokens": ids.shape[1],
+            "native_visual_tokens": native_lengths,
+            "compact_visual_tokens": compact_lengths,
+            "slot_positions": [ids.shape[1] - 1] if slot_role is not None else [],
+            "slot_role": slot_role,
+            "mrope_delta": int(delta[0, 0]),
+            "generation_prompt": generation,
+        }
+        return ids, embeddings, position_ids, metadata
+
+    @torch.inference_mode()
+    def generate(self, prompt, images=(), max_new_tokens=64):
+        """Greedy generation using the Transformers text model's native cache."""
+        if not 0 < max_new_tokens <= 512:
+            raise ValueError("max_new_tokens must be in [1, 512]")
+        start = time.monotonic()
+        ids, embeddings, positions, metadata = self._prepare_inputs(
+            prompt, images, task="generate"
+        )
+        result = self.model.model.language_model(
+            inputs_embeds=embeddings,
+            position_ids=positions,
+            use_cache=True,
+            return_dict=True,
+        )
+        cache = result.past_key_values
+        hidden = result.last_hidden_state[:, -1:, :]
+        rope_start = int(positions[1:].max()) + 1
+        stop_ids = {self.config["eos_token_id"], self.processor.tokenizer.eos_token_id}
+        generated = []
+        finish = "length"
+        for index in range(max_new_tokens):
+            logits = self.model.lm_head(hidden)[:, -1, :].float()
+            if not torch.isfinite(logits).all():
+                raise ValueError("nonfinite generation logits")
+            token = logits.argmax(dim=-1)
+            generated.append(int(token[0]))
+            if int(token[0]) in stop_ids:
+                finish = "eos"
+                break
+            if index + 1 == max_new_tokens:
+                break
+            pos = torch.full(
+                (4, 1, 1), rope_start + index, dtype=torch.long, device=self.device
+            )
+            pos[0] = ids.shape[1] + index
+            result = self.model.model.language_model(
+                input_ids=token[:, None],
+                position_ids=pos,
+                past_key_values=cache,
+                use_cache=True,
+                return_dict=True,
+            )
+            hidden, cache = result.last_hidden_state, result.past_key_values
+        return {
+            "text": self.processor.tokenizer.decode(
+                generated, skip_special_tokens=True
+            ),
+            "token_ids": generated,
+            "finish_reason": finish,
+            "seconds": time.monotonic() - start,
+            "input": metadata,
+        }
+
+    @torch.inference_mode()
+    def embed(self, prompt, images=(), *, dims=None):
+        """Return normalized embedding vectors at the requested MRL dimensions."""
+        start = time.monotonic()
+        _, embeddings, positions, metadata = self._prepare_inputs(
+            prompt, images, task="embedding"
+        )
+        result = self.model.model.language_model(
+            inputs_embeds=embeddings,
+            position_ids=positions,
+            use_cache=False,
+            return_dict=True,
+        )
+        # Training projects in the model dtype before FP32 L2 normalization.
+        projected = F.linear(result.last_hidden_state[:, -1, :], self.head).float()
+        if not torch.isfinite(projected).all() or projected.norm() == 0:
+            raise ValueError("nonfinite or zero embedding")
+        dims = dims or self.config["unimodel_embedding_mrl_dims"]
+        allowed = set(self.config["unimodel_embedding_mrl_dims"])
+        if any(d not in allowed for d in dims):
+            raise ValueError(f"dimensions must be chosen from {sorted(allowed)}")
+        vectors = {
+            str(dim): F.normalize(projected[:, :dim], dim=-1)[0].cpu().tolist()
+            for dim in dims
+        }
+        return {
+            "embeddings": vectors,
+            "seconds": time.monotonic() - start,
+            "input": metadata,
+        }
+
+    @torch.inference_mode()
+    def decide(self, request, images=()):
+        """Evaluate one SystemOne choice/score/noul request using the J slot."""
+        start = time.monotonic()
+        protocol = self.contracts.decision_protocol
+        value = protocol.request_input(request)
+        count = len(value.ids)
+        if count > self.decision_config.max_candidates:
+            raise ValueError("candidate count exceeds the trained direct head capacity")
+        wire_images = protocol.request_images(request)
+        if images and wire_images:
+            raise ValueError("use either local --image inputs or JSON image data URLs")
+        if len(images) > 8 or sum(map(len, wire_images)) > 64 * 1024 * 1024:
+            raise ValueError(
+                "decision supports at most eight images and 64 MiB of image bytes"
+            )
+        _, embeddings, positions, metadata = self._prepare_inputs(
+            protocol.render_input(value)[0],
+            images or wire_images,
+            task="decision",
+        )
+        result = self.model.model.language_model(
+            inputs_embeds=embeddings,
+            position_ids=positions,
+            use_cache=False,
+            return_dict=True,
+        )
+        # The direct head maps h_J to option indices. E normalization and
+        # physical padding rows must never enter the candidate distribution.
+        logits = F.linear(
+            result.last_hidden_state[:, -1, :], self.decision_head
+        ).float()[0, :count]
+        if not torch.isfinite(logits).all():
+            raise ValueError("nonfinite decision logits")
+        probabilities = logits.softmax(dim=-1).cpu().tolist()
+        return {
+            **protocol.response_from_probabilities(value, probabilities),
+            "candidate_count": count,
+            "seconds": time.monotonic() - start,
+            "input": metadata,
+        }

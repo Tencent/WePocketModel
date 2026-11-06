@@ -92,72 +92,95 @@ The same WePM-4B interprets game frames and interface text, retrieves local know
 
 If the player above is not rendered by your Markdown viewer, open the [MP4 demo](assert/game_assistant_demo.mp4) directly.
 
-## Inference on NVIDIA GPU
+## Inference
 
-An approximate memory budget for BF16 inference:
+The examples in [`examples/inference`](examples/inference) load the complete `task_slots_v1` checkpoint, including MGVB, the independent embedding and decision slots, and their trained task heads. They support text and image inputs for generation, embedding extraction, and structured decision tasks.
 
-<table align="center">
-  <thead>
-    <tr><th>Precision</th><th>Weights</th><th>Recommended GPU memory</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>BF16</td><td>≈8 GB</td><td>≥16 GB (e.g. RTX 4090 / A100)</td></tr>
-    <tr><td>FP16</td><td>≈8 GB</td><td>≥16 GB</td></tr>
-  </tbody>
-</table>
+### Hardware and precision
 
-Install dependencies:
+| Device | Compute | Approximate weight memory | Recommended memory |
+| --- | --- | --- | --- |
+| NVIDIA GPU | BF16 | ≈8 GB | ≥16 GB GPU memory |
+| CPU | FP32 | ≈17 GiB | ≥24 GiB system memory |
+
+The GPU example uses one BF16-capable NVIDIA GPU. The CPU example disables CUDA before importing PyTorch and runs the same Hugging Face safetensors checkpoint in FP32.
+
+### Installation
 
 ```bash
-pip install -r requirements.txt
+cd examples/inference
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-Run the bundled script:
+Install PyTorch for the target device, followed by the shared dependencies.
+
+NVIDIA GPU (CUDA 12.8 example):
 
 ```bash
-python inference.py \
-  --model ./checkpoints/WePM-4B \
-  --image ./assert/wepm_function.png \
+python -m pip install torch==2.10.0 torchvision==0.25.0 \
+  --index-url https://download.pytorch.org/whl/cu128
+python -m pip install -r requirements.txt
+```
+
+CPU:
+
+```bash
+python -m pip install torch==2.10.0 torchvision==0.25.0 \
+  --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+```
+
+Set the complete model directory. It must include `runtime_sources/`, `unimodel_aux.safetensors`, the tokenizer and processor files, and all Hugging Face shards.
+
+```bash
+export WEPM_MODEL=/path/to/WePM-HF
+```
+
+### NVIDIA GPU
+
+Text or image-conditioned generation:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python infer.py \
+  --model "$WEPM_MODEL" --task generate \
   --prompt "Describe this figure in one sentence." \
-  --max-new-tokens 256
+  --image ../../assert/wepm_function.png \
+  --max-new-tokens 64 --output results/gpu-generation.json
 ```
 
-`inference.py` loads the model with `device_map="auto"` and `torch.bfloat16`, applies the chat template, and prints the decoded answer. The core of it is:
+### CPU
 
-```python
-from transformers import AutoModelForImageTextToText, AutoProcessor
-
-model_path = "./checkpoints/WePM-4B"
-
-processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
-model = AutoModelForImageTextToText.from_pretrained(
-    model_path,
-    dtype=torch.bfloat16,
-    device_map="auto",
-    trust_remote_code=True,
-).eval()
-
-messages = [{
-    "role": "user",
-    "content": [
-        {"type": "image", "path": "./assert/wepm_function.png"},
-        {"type": "text", "text": "Describe this figure in one sentence."},
-    ],
-}]
-inputs = processor.apply_chat_template(
-    messages,
-    add_generation_prompt=True,
-    tokenize=True,
-    return_dict=True,
-    return_tensors="pt",
-).to(model.device)
-
-output_ids = model.generate(**inputs, max_new_tokens=256)
-answer = processor.tokenizer.decode(
-    output_ids[0, inputs["input_ids"].shape[-1]:], skip_special_tokens=True
-)
-print(answer)
+```bash
+python infer_cpu.py \
+  --model "$WEPM_MODEL" --task generate \
+  --prompt "Describe this figure in one sentence." \
+  --image ../../assert/wepm_function.png \
+  --threads 8 --max-new-tokens 32 \
+  --output results/cpu-generation.json
 ```
+
+### Embedding and decision tasks
+
+Extract a normalized multimodal embedding on GPU:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python infer.py \
+  --model "$WEPM_MODEL" --task embed \
+  --prompt "A multimodal foundation model." \
+  --embedding-dim 1024 --output results/embedding.json
+```
+
+Run the bundled structured decision example:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python infer.py \
+  --model "$WEPM_MODEL" --task decision \
+  --decision-json examples/decision.json \
+  --output results/decision.json
+```
+
+For CPU embedding or decision inference, use `infer_cpu.py` and add `--threads 8`. Each command writes a JSON result, releases the model, and exits. See the [inference guide](examples/inference/README.md) for model layout, all arguments, image input, embedding dimensions, and decision request formats.
 
 ## Citation
 
