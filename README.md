@@ -137,19 +137,58 @@ Set the complete model directory. It must include `runtime_sources/`, `unimodel_
 export WEPM_MODEL=/path/to/WePM-HF
 ```
 
-### NVIDIA GPU
+### NVIDIA GPU inference
 
-Text or image-conditioned generation:
+#### Text generation
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python infer.py \
+  --model "$WEPM_MODEL" --task generate \
+  --prompt "Describe WePM in one sentence." \
+  --max-new-tokens 64 --output results/gpu-text-generation.json
+```
+
+#### Image-conditioned generation
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python infer.py \
   --model "$WEPM_MODEL" --task generate \
   --prompt "Describe this figure in one sentence." \
   --image ../../assert/wepm_function.png \
-  --max-new-tokens 64 --output results/gpu-generation.json
+  --max-new-tokens 64 --output results/gpu-image-generation.json
 ```
 
-### CPU
+#### Embedding extraction
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python infer.py \
+  --model "$WEPM_MODEL" --task embed \
+  --prompt "A multimodal foundation model." \
+  --embedding-dim 1024 --output results/gpu-embedding.json
+```
+
+#### Structured decision
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python infer.py \
+  --model "$WEPM_MODEL" --task decision \
+  --decision-json examples/decision.json \
+  --output results/gpu-decision.json
+```
+
+### CPU inference
+
+#### Text generation
+
+```bash
+python infer_cpu.py \
+  --model "$WEPM_MODEL" --task generate \
+  --prompt "Describe WePM in one sentence." \
+  --threads 8 --max-new-tokens 32 \
+  --output results/cpu-text-generation.json
+```
+
+#### Image-conditioned generation
 
 ```bash
 python infer_cpu.py \
@@ -157,30 +196,29 @@ python infer_cpu.py \
   --prompt "Describe this figure in one sentence." \
   --image ../../assert/wepm_function.png \
   --threads 8 --max-new-tokens 32 \
-  --output results/cpu-generation.json
+  --output results/cpu-image-generation.json
 ```
 
-### Embedding and decision tasks
-
-Extract a normalized multimodal embedding on GPU:
+#### Embedding extraction
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python infer.py \
+python infer_cpu.py \
   --model "$WEPM_MODEL" --task embed \
   --prompt "A multimodal foundation model." \
-  --embedding-dim 1024 --output results/embedding.json
+  --embedding-dim 1024 --threads 8 \
+  --output results/cpu-embedding.json
 ```
 
-Run the bundled structured decision example:
+#### Structured decision
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python infer.py \
+python infer_cpu.py \
   --model "$WEPM_MODEL" --task decision \
-  --decision-json examples/decision.json \
-  --output results/decision.json
+  --decision-json examples/decision.json --threads 8 \
+  --output results/cpu-decision.json
 ```
 
-For CPU embedding or decision inference, use `infer_cpu.py` and add `--threads 8`. Each command writes a JSON result, releases the model, and exits. See the [inference guide](examples/inference/README.md) for model layout, all arguments, image input, embedding dimensions, and decision request formats.
+Each command writes a JSON result, releases the model, and exits. See the [inference guide](examples/inference/README.md) for model layout, all arguments, image input, embedding dimensions, and decision request formats.
 
 ## Citation
 
