@@ -47,9 +47,15 @@ Evaluation covers 16 benchmarks in five groups: image retrieval, text retrieval,
   </tbody>
 </table>
 
+<p align="center">
+  <img src="assert/performance.png" width="1080" alt="Per-benchmark ranking of WePM across the Embedding, Generation and Decision capability families">
+</p>
+
+The polar charts rank WePM against all evaluated models on every benchmark of each capability family: Embedding (20 benchmarks, 10 models), Generation (36 benchmarks, 9 models) and Decision (4 benchmarks, 17 models). WePM ranks first in all three families.
+
 Against ULME, the strongest prior unified retrieval–generation baseline, WePM improves ImageRet. by +7.17, TextRet. by +2.64, Math by +30.44, VQA by +19.38 and OCR by +19.32, lifting `Joint` from 38.15 to 52.74 (+14.59). The gains are not concentrated in one group: the Embedding aggregate reaches 38.60 (ULME: 33.46) and the Generation aggregate reaches 66.87 (ULME: 42.85).
 
-Decision capability (choice, ordinal scoring, binary judgment) is part of the model interface but is not included in the table above; its full evaluation will be released with the complete results.
+Decision capability (choice, ordinal scoring, binary judgment) is evaluated on 4 benchmarks against 17 models, where WePM also ranks first; its benchmark-level breakdown is the rightmost chart above.
 
 ## Heterogeneous Capability Density (HCD)
 
