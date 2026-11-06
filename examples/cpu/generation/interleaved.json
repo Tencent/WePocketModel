@@ -1,0 +1,24 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "First inspect this weather scene:"
+    },
+    {
+      "type": "image",
+      "path": "../assets/img2.heic"
+    },
+    {
+      "type": "text",
+      "text": "Then compare it with this mountain landscape:"
+    },
+    {
+      "type": "image",
+      "path": "../assets/img3.heic"
+    },
+    {
+      "type": "text",
+      "text": "Summarize the main visual differences between the two scenes."
+    }
+  ]
+}

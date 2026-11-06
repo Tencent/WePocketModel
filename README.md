@@ -94,7 +94,17 @@ If the player above is not rendered by your Markdown viewer, open the [MP4 demo]
 
 ## Inference
 
-The examples in [`examples/inference`](examples/inference) load the complete `task_slots_v1` checkpoint, including MGVB, the independent embedding and decision slots, and their trained task heads. They support text and image inputs for generation, embedding extraction, and structured decision tasks.
+The repository keeps runtime code, runnable cases, and model weights separate:
+
+```text
+inference/              # Complete inference implementation
+examples/gpu/           # NVIDIA GPU task cases and input assets
+examples/cpu/           # CPU task cases and input assets
+checkpoints/huggingface # Hugging Face safetensors checkpoint
+checkpoints/gguf/       # Hybrid GGUF bundle (not ONNX)
+```
+
+The current runnable examples use the complete Hugging Face checkpoint and support generation, embedding extraction, and structured decision. Generation cases cover single-text, single-image, and ordered text–image interleaving.
 
 ### Hardware and precision
 
@@ -103,24 +113,19 @@ The examples in [`examples/inference`](examples/inference) load the complete `ta
 | NVIDIA GPU | BF16 | ≈8 GB | ≥16 GB GPU memory |
 | CPU | FP32 | ≈17 GiB | ≥24 GiB system memory |
 
-The GPU example uses one BF16-capable NVIDIA GPU. The CPU example disables CUDA before importing PyTorch and runs the same Hugging Face safetensors checkpoint in FP32.
-
 ### Installation
 
 ```bash
-cd examples/inference
 python -m venv .venv
 source .venv/bin/activate
 ```
-
-Install PyTorch for the target device, followed by the shared dependencies.
 
 NVIDIA GPU (CUDA 12.8 example):
 
 ```bash
 python -m pip install torch==2.10.0 torchvision==0.25.0 \
   --index-url https://download.pytorch.org/whl/cu128
-python -m pip install -r requirements.txt
+python -m pip install -r inference/requirements.txt
 ```
 
 CPU:
@@ -128,97 +133,56 @@ CPU:
 ```bash
 python -m pip install torch==2.10.0 torchvision==0.25.0 \
   --index-url https://download.pytorch.org/whl/cpu
-python -m pip install -r requirements.txt
+python -m pip install -r inference/requirements.txt
 ```
 
-Set the complete model directory. It must include `runtime_sources/`, `unimodel_aux.safetensors`, the tokenizer and processor files, and all Hugging Face shards.
-
-```bash
-export WEPM_MODEL=/path/to/WePM-HF
-```
+The scripts use `checkpoints/huggingface` by default. Set `WEPM_MODEL` to use another complete Hugging Face checkpoint.
 
 ### NVIDIA GPU inference
 
-#### Text generation
+#### Generation: single text, single image, or interleaved content
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python infer.py \
-  --model "$WEPM_MODEL" --task generate \
-  --prompt "Describe WePM in one sentence." \
-  --max-new-tokens 64 --output results/gpu-text-generation.json
-```
-
-#### Image-conditioned generation
-
-```bash
-CUDA_VISIBLE_DEVICES=0 python infer.py \
-  --model "$WEPM_MODEL" --task generate \
-  --prompt "Describe this figure in one sentence." \
-  --image ../../assert/wepm_function.png \
-  --max-new-tokens 64 --output results/gpu-image-generation.json
+bash examples/gpu/generation/run.sh single_text
+bash examples/gpu/generation/run.sh single_image
+bash examples/gpu/generation/run.sh interleaved
 ```
 
 #### Embedding extraction
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python infer.py \
-  --model "$WEPM_MODEL" --task embed \
-  --prompt "A multimodal foundation model." \
-  --embedding-dim 1024 --output results/gpu-embedding.json
+bash examples/gpu/embedding/run.sh
 ```
 
 #### Structured decision
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python infer.py \
-  --model "$WEPM_MODEL" --task decision \
-  --decision-json examples/decision.json \
-  --output results/gpu-decision.json
+bash examples/gpu/decision/run.sh
 ```
 
 ### CPU inference
 
-#### Text generation
+#### Generation: single text, single image, or interleaved content
 
 ```bash
-python infer_cpu.py \
-  --model "$WEPM_MODEL" --task generate \
-  --prompt "Describe WePM in one sentence." \
-  --threads 8 --max-new-tokens 32 \
-  --output results/cpu-text-generation.json
-```
-
-#### Image-conditioned generation
-
-```bash
-python infer_cpu.py \
-  --model "$WEPM_MODEL" --task generate \
-  --prompt "Describe this figure in one sentence." \
-  --image ../../assert/wepm_function.png \
-  --threads 8 --max-new-tokens 32 \
-  --output results/cpu-image-generation.json
+bash examples/cpu/generation/run.sh single_text
+bash examples/cpu/generation/run.sh single_image
+bash examples/cpu/generation/run.sh interleaved
 ```
 
 #### Embedding extraction
 
 ```bash
-python infer_cpu.py \
-  --model "$WEPM_MODEL" --task embed \
-  --prompt "A multimodal foundation model." \
-  --embedding-dim 1024 --threads 8 \
-  --output results/cpu-embedding.json
+bash examples/cpu/embedding/run.sh
 ```
 
 #### Structured decision
 
 ```bash
-python infer_cpu.py \
-  --model "$WEPM_MODEL" --task decision \
-  --decision-json examples/decision.json --threads 8 \
-  --output results/cpu-decision.json
+bash examples/cpu/decision/run.sh
 ```
 
-Each command writes a JSON result, releases the model, and exits. See the [inference guide](examples/inference/README.md) for model layout, all arguments, image input, embedding dimensions, and decision request formats.
+Each command writes a timestamped JSON result, releases the model, and exits. See the [inference guide](inference/README.md) for the CLI and ordered multimodal input format, and the [examples guide](examples/README.md) for all runnable cases.
 
 ## Citation
 

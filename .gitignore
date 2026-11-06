@@ -18,7 +18,7 @@ venv/
 # Logs / temp
 *.log
 tmp/
-examples/inference/results/
+examples/**/results/
 
 # Raw demo footage: only the compressed MP4 under assert/ is tracked
 *.mov

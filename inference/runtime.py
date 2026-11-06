@@ -14,17 +14,48 @@ from PIL import Image
 from safetensors.torch import load_file
 from transformers import AutoProcessor, Qwen3_5ForConditionalGeneration
 
+try:
+    from pillow_heif import register_heif_opener
+except ImportError:
+    register_heif_opener = None
+else:
+    register_heif_opener()
 
-def load_images(paths, prepare_image):
-    """Apply the training-aligned RGB and longest-edge resize policy."""
+
+def prepare_content(content, prepare_image):
+    """Load images without changing the declared text/image order."""
+    processor_content = []
     images = []
-    for path in paths:
-        with Image.open(
-            io.BytesIO(path) if isinstance(path, bytes) else path
-        ) as original:
-            image = original.convert("RGB")
-        images.append(prepare_image(image))
-    return images
+    content_types = []
+    for item in content:
+        item_type = item.get("type") if isinstance(item, dict) else None
+        if item_type == "text":
+            text = item.get("text")
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError("text content must be nonempty")
+            processor_content.append({"type": "text", "text": text})
+        elif item_type == "image":
+            source = item.get("path", item.get("bytes"))
+            if source is None:
+                raise ValueError("image content requires path or bytes")
+            if (
+                register_heif_opener is None
+                and not isinstance(source, bytes)
+                and Path(source).suffix.lower() in {".heic", ".heif"}
+            ):
+                raise RuntimeError("HEIC input requires pillow-heif; install requirements.txt")
+            with Image.open(
+                io.BytesIO(source) if isinstance(source, bytes) else source
+            ) as original:
+                image = prepare_image(original.convert("RGB"))
+            images.append(image)
+            processor_content.append({"type": "image", "image": image})
+        else:
+            raise ValueError("content items must have type text or image")
+        content_types.append(item_type)
+    if not processor_content:
+        raise ValueError("content must not be empty")
+    return processor_content, images, content_types
 
 
 def wait_for_gpu(min_free_gib=14, timeout=120):
@@ -48,8 +79,8 @@ def wait_for_gpu(min_free_gib=14, timeout=120):
 class UniModelTransformers:
     """Qwen3.5 + MGVB + independent E/J slots and trained task heads.
 
-    Each call accepts one text/image request. Generation uses a KV/recurrent
-    cache and no slot. E reads the embedding slot and applies the normalized
+    Each call accepts one ordered text/image request. Generation uses a
+    KV/recurrent cache and no slot. E reads the embedding slot and applies the normalized
     projection; J reads its own slot and applies the direct candidate-index head.
     """
 
@@ -191,21 +222,16 @@ class UniModelTransformers:
         )
 
     @torch.inference_mode()
-    def _prepare_inputs(self, prompt: str, images, *, task: str):
+    def _prepare_inputs(self, content, *, task: str):
         if task not in {"generate", "embedding", "decision"}:
             raise ValueError(f"unknown task: {task}")
         generation = task == "generate"
         slot_role = None if generation else task
-        if not prompt.strip() and not images:
-            raise ValueError("an image or nonempty prompt is required")
-        loaded_images = load_images(
-            images, self.contracts.image_geometry.prepare_model_image
+        processor_content, loaded_images, content_types = prepare_content(
+            content, self.contracts.image_geometry.prepare_model_image
         )
-        content = [{"type": "image", "image": image} for image in loaded_images]
-        if prompt:
-            content.append({"type": "text", "text": prompt})
         rendered = self.processor.apply_chat_template(
-            [{"role": "user", "content": content}],
+            [{"role": "user", "content": processor_content}],
             tokenize=False,
             add_generation_prompt=generation,
             enable_thinking=False,
@@ -264,17 +290,18 @@ class UniModelTransformers:
             "slot_role": slot_role,
             "mrope_delta": int(delta[0, 0]),
             "generation_prompt": generation,
+            "content_types": content_types,
         }
         return ids, embeddings, position_ids, metadata
 
     @torch.inference_mode()
-    def generate(self, prompt, images=(), max_new_tokens=64):
+    def generate(self, content, max_new_tokens=64):
         """Greedy generation using the Transformers text model's native cache."""
         if not 0 < max_new_tokens <= 512:
             raise ValueError("max_new_tokens must be in [1, 512]")
         start = time.monotonic()
         ids, embeddings, positions, metadata = self._prepare_inputs(
-            prompt, images, task="generate"
+            content, task="generate"
         )
         result = self.model.model.language_model(
             inputs_embeds=embeddings,
@@ -322,11 +349,11 @@ class UniModelTransformers:
         }
 
     @torch.inference_mode()
-    def embed(self, prompt, images=(), *, dims=None):
+    def embed(self, content, *, dims=None):
         """Return normalized embedding vectors at the requested MRL dimensions."""
         start = time.monotonic()
         _, embeddings, positions, metadata = self._prepare_inputs(
-            prompt, images, task="embedding"
+            content, task="embedding"
         )
         result = self.model.model.language_model(
             inputs_embeds=embeddings,
@@ -368,10 +395,18 @@ class UniModelTransformers:
             raise ValueError(
                 "decision supports at most eight images and 64 MiB of image bytes"
             )
+        decision_content = [
+            {
+                "type": "image",
+                "path" if not isinstance(image, bytes) else "bytes": image,
+            }
+            for image in (images or wire_images)
+        ]
+        decision_content.append(
+            {"type": "text", "text": protocol.render_input(value)[0]}
+        )
         _, embeddings, positions, metadata = self._prepare_inputs(
-            protocol.render_input(value)[0],
-            images or wire_images,
-            task="decision",
+            decision_content, task="decision"
         )
         result = self.model.model.language_model(
             inputs_embeds=embeddings,

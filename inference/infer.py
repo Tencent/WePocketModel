@@ -12,6 +12,34 @@ from common import write_json
 from runtime import UniModelTransformers, wait_for_gpu
 
 
+def load_content(path: Path) -> list[dict]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    content = payload.get("content") if isinstance(payload, dict) else None
+    if not isinstance(content, list) or not content:
+        raise ValueError(f"{path} must contain a nonempty content array")
+    resolved = []
+    for index, item in enumerate(content):
+        if not isinstance(item, dict) or item.get("type") not in {"text", "image"}:
+            raise ValueError(f"content[{index}] must be a text or image object")
+        if item["type"] == "text":
+            text = item.get("text")
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError(f"content[{index}].text must be nonempty")
+            resolved.append({"type": "text", "text": text})
+            continue
+        value = item.get("path")
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"content[{index}].path must be nonempty")
+        image = Path(value).expanduser()
+        if not image.is_absolute():
+            image = path.parent / image
+        image = image.resolve()
+        if not image.is_file():
+            raise FileNotFoundError(image)
+        resolved.append({"type": "image", "path": image})
+    return resolved
+
+
 def main(*, device="cuda:0"):
     device = torch.device(device)
     is_cpu = device.type == "cpu"
@@ -25,8 +53,13 @@ def main(*, device="cuda:0"):
     parser.add_argument(
         "--task", choices=["generate", "embed", "both", "decision"], default="generate"
     )
-    parser.add_argument("--prompt", default="请用一句话介绍你自己。")
+    parser.add_argument("--prompt", help="text input; images are placed before it")
     parser.add_argument("--image", type=Path, action="append", default=[])
+    parser.add_argument(
+        "--content-json",
+        type=Path,
+        help="ordered content array for text/image interleaving",
+    )
     parser.add_argument(
         "--decision-json",
         type=Path,
@@ -60,9 +93,24 @@ def main(*, device="cuda:0"):
         torch.set_num_interop_threads(1)
     if (args.task == "decision") != (args.decision_json is not None):
         parser.error("--decision-json is required only with --task decision")
+    if args.content_json and (args.prompt is not None or args.image):
+        parser.error("--content-json cannot be combined with --prompt or --image")
+    if args.task == "decision" and args.content_json:
+        parser.error("decision input is defined by --decision-json")
     decision_request = (
-        json.loads(args.decision_json.read_text()) if args.decision_json else None
+        json.loads(args.decision_json.read_text(encoding="utf-8"))
+        if args.decision_json
+        else None
     )
+    if args.content_json:
+        content = load_content(args.content_json.resolve())
+    else:
+        content = [{"type": "image", "path": image.resolve()} for image in args.image]
+        prompt = args.prompt
+        if prompt is None and not content and args.task != "decision":
+            prompt = "请用一句话介绍你自己。"
+        if prompt:
+            content.append({"type": "text", "text": prompt})
     if args.output.exists():
         raise FileExistsError(args.output)
 
@@ -80,12 +128,10 @@ def main(*, device="cuda:0"):
         model = UniModelTransformers(args.model, device=device)
         result = {}
         if args.task in ("generate", "both"):
-            result["generation"] = model.generate(
-                args.prompt, args.image, args.max_new_tokens
-            )
+            result["generation"] = model.generate(content, args.max_new_tokens)
         if args.task in ("embed", "both"):
             result["embedding"] = model.embed(
-                args.prompt, args.image, dims=[args.embedding_dim]
+                content, dims=[args.embedding_dim]
             )
         if args.task == "decision":
             result["decision"] = model.decide(decision_request, args.image)
