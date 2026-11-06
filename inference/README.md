@@ -75,9 +75,9 @@ Use `--content-json` when text and images must retain an explicit order. Relativ
 {
   "content": [
     {"type": "text", "text": "Inspect the first image:"},
-    {"type": "image", "path": "../assets/first.heic"},
+    {"type": "image", "path": "../images/first.heic"},
     {"type": "text", "text": "Compare it with the second image:"},
-    {"type": "image", "path": "../assets/second.heic"},
+    {"type": "image", "path": "../images/second.heic"},
     {"type": "text", "text": "Summarize the differences."}
   ]
 }
@@ -97,7 +97,7 @@ CUDA_VISIBLE_DEVICES=0 python inference/infer.py \
 ```bash
 CUDA_VISIBLE_DEVICES=0 python inference/infer.py \
   --model checkpoints/huggingface --task decision \
-  --decision-json examples/gpu/decision/request.json \
+  --decision-json examples/gpu/demo_data/decision/request.json \
   --output results/decision.json
 ```
 

@@ -5,16 +5,24 @@ The runnable examples are grouped by device. Each device directory contains gene
 ```text
 examples/
 ├── gpu/
-│   ├── assets/
+│   ├── demo_data/
+│   │   ├── images/
+│   │   ├── generation/
+│   │   └── decision/
 │   ├── generation/
 │   ├── embedding/
 │   └── decision/
 └── cpu/
-    ├── assets/
+    ├── demo_data/
+    │   ├── images/
+    │   ├── generation/
+    │   └── decision/
     ├── generation/
     ├── embedding/
     └── decision/
 ```
+
+Task directories contain only runnable shell scripts. All JSON requests and image inputs live under the device-specific `demo_data/` directory.
 
 The generation examples cover all supported input layouts:
 
@@ -22,7 +30,7 @@ The generation examples cover all supported input layouts:
 - `single_image`: one image item
 - `interleaved`: text → image → text → image → text
 
-The original HEIC images are preserved byte-for-byte in each device's `assets/` directory. The inference dependencies include `pillow-heif` for decoding them.
+The original HEIC images are preserved byte-for-byte in each device's `demo_data/images/` directory. The inference dependencies include `pillow-heif` for decoding them.
 
 ## NVIDIA GPU
 

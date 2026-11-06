@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 MODEL="${WEPM_MODEL:-$REPO_ROOT/checkpoints/huggingface}"
-INPUT="$SCRIPT_DIR/../generation/single_image.json"
+INPUT="$SCRIPT_DIR/../demo_data/generation/single_image.json"
 OUTPUT_DIR="${WEPM_OUTPUT_DIR:-$SCRIPT_DIR/results}"
 
 mkdir -p "$OUTPUT_DIR"

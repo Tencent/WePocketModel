@@ -8,5 +8,5 @@ OUTPUT_DIR="${WEPM_OUTPUT_DIR:-$SCRIPT_DIR/results}"
 
 mkdir -p "$OUTPUT_DIR"
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}" python "$REPO_ROOT/inference/infer.py" \
-  --model "$MODEL" --task decision --decision-json "$SCRIPT_DIR/request.json" \
+  --model "$MODEL" --task decision --decision-json "$SCRIPT_DIR/../demo_data/decision/request.json" \
   --output "$OUTPUT_DIR/choice-$(date -u +%Y%m%dT%H%M%SZ).json"

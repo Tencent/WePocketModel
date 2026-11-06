@@ -6,7 +6,7 @@
     },
     {
       "type": "image",
-      "path": "../assets/img2.heic"
+      "path": "../images/img2.heic"
     },
     {
       "type": "text",
@@ -14,7 +14,7 @@
     },
     {
       "type": "image",
-      "path": "../assets/img3.heic"
+      "path": "../images/img3.heic"
     },
     {
       "type": "text",
