@@ -1,0 +1,80 @@
+{
+  "format": "wepm-gguf-release-v1",
+  "model_name": "WePM",
+  "step": 2000,
+  "architecture": "task_slots_v1",
+  "capabilities": [
+    "generate",
+    "embed",
+    "decision"
+  ],
+  "source": "WePM-HF",
+  "source_inventory_sha256": "ad18a01b2c2e64c45963e1960b799efb1b4ec8908cec7497b16123ba40ececbe",
+  "source_export_sha256": "e2383a547245d46db9d6ad01f6a3d1ea43ca4778ea0bb677cd745c62cfd3c291",
+  "source_file_sha256": {
+    "model-00001-of-00005.safetensors": "74ce711a7bec36acef3ef394f760774fa67f2984322478f91021ca6207422d3a",
+    "model-00002-of-00005.safetensors": "9c4c5f18ba40f4d8a35d542b657fd823eab9d60bd13370b1e81e83f86aefbcca",
+    "model-00003-of-00005.safetensors": "6d098cc1fd13f5f53d845736e7774ba2d0402747c74513797cdcef09f78d6d08",
+    "model-00004-of-00005.safetensors": "e7fd501750ec8149976c81395f163253c053a127493b96ea1ae965691ae18734",
+    "model-00005-of-00005.safetensors": "f311a35d4746e3231a8ae609ed9f25562b0daf6347990a0b585969923093c27c",
+    "unimodel_aux.safetensors": "4fb532a7c883eff7e67286b4661151587bb35bd7f66570f336a3a89e22faa96f"
+  },
+  "source_tensor_count": 762,
+  "source_parameters": 4563043328,
+  "llama_cpp_commit": "37b0f9c36ae910c5a445b3934e840084ebc9b132",
+  "position_layout": "sequence,height,width,temporal; rope.section_order=zyxt",
+  "language_quantization": "Q4_K_M",
+  "auxiliary_precision": "BF16 unchanged",
+  "language_variants": {
+    "bf16": "language-BF16.gguf",
+    "q4": "language-Q4_K_M.gguf"
+  },
+  "files": {
+    "language-BF16.gguf": {
+      "bytes": 8424392320,
+      "sha256": "292212112a40696417c68dad5f00e71e3d0caa562ce6e0b1d6b6e4cb0407a780",
+      "tensor_count": 426,
+      "parameters": 4205751296,
+      "tensor_types": [
+        "BF16",
+        "F32"
+      ]
+    },
+    "language-Q4_K_M.gguf": {
+      "bytes": 2708803200,
+      "sha256": "2cd27f01d31a9379052f20eb2b90b9e05459481ceed9da0e8240f5e9e6b666da",
+      "tensor_count": 426,
+      "parameters": 4205751296,
+      "tensor_types": [
+        "F32",
+        "Q4_K",
+        "Q6_K"
+      ]
+    },
+    "multimodal-BF16.gguf": {
+      "bytes": 714608704,
+      "sha256": "e127f3f9742b90fd5215b5c7fa950ba4cf6d9906aadc2bf532486cdec67c8195",
+      "tensor_count": 336,
+      "parameters": 357292032,
+      "tensor_types": [
+        "BF16"
+      ]
+    }
+  },
+  "asset_sha256": {
+    "config.json": "796c433790a283fa769b139202e5e52dfeedc98154c826aff8e6242d5f02fb8a",
+    "processor_config.json": "66df228ca824d098221d8db9d31968e10d41910415231d709d2db4772b160d87",
+    "tokenizer_config.json": "e98f1901ac6f0adff67b1d540bfa0c36ac1a0cf59eb72ed78146ef89aafa1182",
+    "tokenizer.json": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+    "chat_template.jinja": "854a73d577483a6ebccf72c04b786915e40fbb53656ffe2aa814c23100375188"
+  },
+  "runtime_source_sha256": {
+    "generation_slots.py": "0f6669f8d64b7de61c2db61184b68e085f9b54ed1663cf6f93b9d57039d35dce",
+    "mgvb_utils.py": "17b0df17510f84d3c60b85144b0469bd61c7d4240e6a03d9b1cca6899e8908e4",
+    "rope_utils.py": "6aa696c8e42a0ab3bd677d6647af31ef0c097323f219be35609cbe07e106c9a4",
+    "mgvb.py": "19caded60165a01a38139ac27a8ae9037c7e8357d4ab0022b579d1ade8829e2f",
+    "decision_config.py": "b14b613d5fc51f1e24481dc7fd7cb799b4b1253d455d0003ace17a51ce2538a7",
+    "image_geometry.py": "c0f320383a8f914945e4f4cc730f80ab321ded6fe474ffc322db6172d2883f43",
+    "decision_protocol.py": "795c23e8ff2644250accb72cff13bb65889c0a838fa5560eed5238b7904f5a49"
+  }
+}
