@@ -70,12 +70,10 @@ HCD is defined as:
 Counting is done per capability family, not per benchmark: OCR, captioning and VQA all belong to Generation and are not counted three times.
 
 <p align="center">
-  <img src="assert/memory_vs_quality.png" width="640" alt="Quality vs. memory trade-off">
+  <img src="assert/memory_vs_quality.png" width="640" alt="HCD comparison between WePM and six independent three-model compositions">
 </p>
 
-The figure above is an early slice of this comparison. It covers Generation and Representation only, and counts BF16 weights only — KV cache, activations, framework overhead and runtime fragmentation are excluded. In this setting, deploying Qwen3.5-4B and WeMM-Emb-4B separately requires ≈16 GB of BF16 weights and reaches an aggregate quality of 63.08; WePM reaches 63.12 with ≈8 GB. The independent composition closest in quality to WePM actually requires 24 GB, not 16 GB.
-
-<!-- TBD: replace with the full three-family HCD figure (WePM vs. generator + embedder + decision model), including usability thresholds and resident inference memory at runtime. -->
+The chart compares WePM with six independent compositions of a generator, a multimodal embedder and a decision model (d3-4.5B). Memory is counted as BF16 weights only; KV cache, activations, framework overhead and runtime fragmentation are excluded. With ≈8 GB, WePM reaches a harmonic performance of ≈68% and an HCD of 0.255, while the lightest independent composition (M1, ≈21 GB) reaches HCD 0.096 and the heaviest (M6, ≈41 GB) only 0.049 — stacking separate models costs roughly 2.6× to 5× the weight memory and still lowers the capability density.
 
 ## Applications
 
