@@ -1,4 +1,4 @@
-# WePM: Hierarchical Conflict Reconciliation for Unified MLLMs
+<h1 align="center">WePM: Hierarchical Conflict Reconciliation for Unified MLLMs</h1>
 
 <p align="center">
   <i>Unified Pocket Models for In-App Multimodal Intelligence</i>
