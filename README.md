@@ -5,14 +5,14 @@
 </p>
 
 <p align="center">
-  <b>Model weights</b>: TBD &nbsp;|&nbsp; <b>Technical Report</b>: TBD &nbsp;|&nbsp; <b>Code & Evaluation</b>: TBD
+  <b>Model weights</b>: <a href="https://huggingface.co/tencent/WePocketModel1.0-4B">4B</a> · <a href="https://huggingface.co/tencent/WePocketModel1.0-2B">2B</a> &nbsp;|&nbsp; <b>Technical Report</b>: TBD &nbsp;|&nbsp; <b>Code & Evaluation</b>: TBD
 </p>
 
 ## Model Introduction
 
 On-device AI applications rarely depend on a single capability. A personal assistant may need multimodal retrieval to find local content, generation to understand and respond, and decision making to route the next action. Deploying a separate specialist for each path duplicates vision encoders and language backbones, increasing resident memory, system complexity and the cost of keeping intelligence always available on device.
 
-**WePM** is a 4B unified multimodal model designed around a different principle: one compact vision–language backbone should support multiple capability families without sacrificing their individual quality. A single set of parameters provides:
+**WePM (WePocketModel1.0)** is a unified multimodal model family with planned **2B and 4B** releases, designed around a different principle: one compact vision–language backbone should support multiple capability families without sacrificing their individual quality. A single set of parameters provides:
 
 - **Representation** — L2-normalized multimodal embeddings for image retrieval, text retrieval and candidate ranking.
 - **Generation** — OCR, image captioning, visual question answering, summarization and assistant responses.
@@ -28,25 +28,25 @@ In BF16, the shared 4B backbone occupies approximately 8 GB of weight memory. Mo
 
 Simply mixing heterogeneous tasks does not make them compatible. WePM identifies conflicts at three levels: different tasks require different visual granularity, their datasets provide different forms of supervision, and their losses operate at different scales and training rhythms. WePM reconciles these conflicts with three complementary components:
 
-- **MGVB (Multi-Granularity Visual Bottleneck)** organizes a fixed visual-token budget into global, regional and fine-grained banks. It preserves scene-level semantics, object relations and local details while allowing each task to focus on the evidence it needs.
-- **ULKD (Unified Listwise Knowledge Distillation)** transfers complementary knowledge from generation and representation teachers into one student. On the generation path, the teacher supervises prefixes visited by the student itself; on the representation path, the student learns both candidate rankings and embedding structure.
-- **SEMO (Stable and Efficient Multitask Optimization)** schedules heterogeneous tasks and accumulates their gradients through sequential forward/backward passes before a shared update. This stabilizes optimization while avoiding the memory cost of retaining every task graph concurrently.
+- **MGVB (Multi-Granularity Visual Budgeting)** allocates a fixed total visual-token budget across global, regional and fine-grained banks using prompt-conditioned selection. It preserves scene-level semantics, object relations and local details while allowing each task to focus on the evidence it needs.
+- **ULKD (Unified Listwise Knowledge Distillation)** transfers generation and embedding knowledge from a frozen multimodal teacher into one student. On the generation path, on-policy token-level KL distillation supervises prefixes visited by the student itself; on the embedding path, candidate-list KL distillation and representation alignment teach the student candidate rankings and embedding structure.
+- **SEMO (Stable and Efficient Multitask Optimization)** accumulates fixed-weight task gradients through sequential forward/backward passes at the same model parameters, releasing each computation graph after backward before one joint optimizer update. This stabilizes optimization while avoiding the memory cost of retaining every task graph concurrently.
 
-Together, these designs align visual evidence, learning signals and optimization dynamics within one compact backbone.
+Together, these designs align visual evidence, learning signals and optimization dynamics within one compact backbone. Inference uses one vision encoder, one shared multimodal LLM backbone and one shared soft slot, with projection-based embedding/decision readouts and autoregressive generation.
 
 <p align="center">
-  <img src="assert/last.png" width="640" alt="WePM architecture">
+  <img src="assert/last.png" width="640" alt="WePM shared inference substrate and MGVB, ULKD and SEMO training components">
 </p>
 
 ## Performance Across Three Capability Families
 
-WePM is evaluated across all three capability families rather than through a single aggregate score: **Embedding** covers 20 datasets and 10 models, **Generation** covers 36 datasets and 9 models, and **Decision** covers 4 datasets and 17 models. The figure summarizes the benchmark-level comparisons and reports WePM's overall rank within each evaluation pool.
+WePM is evaluated across all three capability families rather than through a single aggregate score: **Embedding** covers 30 benchmarks and 9 models, **Generation** covers 39 benchmarks and 9 models, and **Decision (JEV)** covers 7 benchmarks and 21 models. The figure summarizes the benchmark-level comparisons and reports WePM's overall rank within each evaluation pool.
 
 <p align="center">
-  <img src="assert/performance.png" width="1080" alt="Per-benchmark ranking of WePM across the Embedding, Generation and Decision capability families">
+  <img src="assert/performance.png" width="1080" alt="Benchmark-level comparisons and overall WePM ranking across 30 Embedding, 39 Generation and 7 Decision (JEV) benchmarks">
 </p>
 
-WePM ranks first overall in all three families. The result is important for a unified model: adding generation and typed decision paths does not come at the expense of multimodal representation, while strengthening representation does not dilute OCR, visual reasoning or decision quality. The model therefore expands the range of supported tasks without reducing any capability family to a nominal add-on.
+WePM ranks first overall in each of the three evaluation pools. These results show that one shared 4B backbone can support competitive embedding, generation and decision capabilities together. The ranking is an overall result within each capability family, not a claim that WePM leads every individual benchmark.
 
 ## Heterogeneous Capability Density (HCD)
 
@@ -59,12 +59,12 @@ Benchmark quality alone does not capture the central constraint of on-device dep
 HCD counts capability families rather than individual benchmarks. For example, OCR, captioning and visual question answering all contribute to Generation instead of being counted as three separate capabilities. A higher HCD therefore indicates that a model delivers broader and stronger usable intelligence per unit of resident memory—not merely that it has been evaluated on more tasks.
 
 <p align="center">
-  <img src="assert/memory_vs_quality.png" width="640" alt="HCD comparison between WePM and six independent three-model compositions">
+  <img src="assert/memory_vs_quality.png" width="640" alt="Harmonic performance versus BF16 weight memory for WePM (HCD=0.244) and six independent three-model compositions">
 </p>
 
-The comparison pairs independent generation and embedding models with the same 4.5B decision model. WePM reaches approximately 68% harmonic performance with about 8 GB of BF16 weight memory, yielding an HCD of 0.255. The six independent three-model compositions require roughly 21–41 GB, yet achieve HCD values of only 0.049–0.096. In this comparison, unifying the three capability families provides substantially higher capability density than stacking specialized models.
+The comparison pairs independent generation and embedding models with the same d3-4.5B decision model. WePM reaches approximately 65.1% harmonic performance with about 8 GB of BF16 weight memory, yielding an HCD of 0.244. The six independent three-model compositions require roughly 21–43 GB, with harmonic performance of approximately 64.2–64.8% and HCD values of 0.045–0.092. In this comparison, WePM achieves higher harmonic performance with substantially less weight memory, delivering approximately 2.7–5.4× the HCD of the independent compositions.
 
-The memory values above count BF16 weights only. KV cache, activations, framework overhead and runtime fragmentation are excluded.
+The memory values and HCD comparison above use BF16 weights only, not full runtime memory. KV cache, activations, framework overhead and runtime fragmentation are excluded.
 
 ## Applications
 
@@ -94,26 +94,45 @@ If the player above is not rendered by your Markdown viewer, open the [MP4 demo]
 
 ## Inference
 
-The repository keeps runtime code, runnable cases, and model weights separate:
+Runtime code and runnable cases are maintained in GitLab; the 2B and 4B model releases will be hosted separately on Hugging Face:
+
+| Model size | Hugging Face / safetensors |
+| --- | --- |
+| 4B | [WePocketModel1.0-4B](https://huggingface.co/tencent/WePocketModel1.0-4B) |
+| 2B | [WePocketModel1.0-2B](https://huggingface.co/tencent/WePocketModel1.0-2B) |
+
+These are the planned release addresses; downloads require the corresponding repositories to be published.
 
 ```text
-inference/              # Complete inference implementation
+inference/              # Hugging Face Transformers inference implementation
 examples/gpu/           # NVIDIA GPU task cases and input assets
 examples/cpu/           # CPU task cases and input assets
-checkpoints/huggingface # Hugging Face safetensors checkpoint
-checkpoints/gguf/       # Hybrid GGUF bundle (not ONNX)
+checkpoints/            # Optional local downloads; model files are not tracked
 ```
 
-The current runnable examples use the complete Hugging Face checkpoint and support generation, embedding extraction, and structured decision. Generation cases cover single-text, single-image, and ordered text–image interleaving.
+The runnable examples use the complete Hugging Face export and support generation, embedding extraction, and structured decision. Generation cases cover single-text, single-image, and ordered text–image interleaving. The current results and hardware measurements in this README are for the 4B model, not the 2B release. The shared loader requires the same task_slots_v1 export contract; 2B inference will be validated after its checkpoint is available.
 
-### Hardware and precision
+### Hardware and precision (4B)
 
 | Device | Compute | Approximate weight memory | Recommended memory |
 | --- | --- | --- | --- |
 | NVIDIA GPU | BF16 | ≈8 GB | ≥16 GB GPU memory |
 | CPU | FP32 | ≈17 GiB | ≥24 GiB system memory |
 
+### Clone the code
+
+Clone the inference code and examples:
+
+```bash
+git clone https://git.woa.com/seraphyuan/WePM.git
+cd WePM
+```
+
+The current branch does not bundle model weights or require Git LFS. Inference resolves the complete 2B or 4B export from Hugging Face or an explicitly selected local directory.
+
 ### Installation
+
+Create a Python 3.10–3.13 environment:
 
 ```bash
 python -m venv .venv
@@ -136,7 +155,22 @@ python -m pip install torch==2.10.0 torchvision==0.25.0 \
 python -m pip install -r inference/requirements.txt
 ```
 
-The scripts use `checkpoints/huggingface` by default. Set `WEPM_MODEL` to use another complete Hugging Face checkpoint.
+### Model selection and download
+
+The scripts default to `tencent/WePocketModel1.0-4B`. The first online run downloads the complete export into the Hugging Face cache; subsequent runs reuse the cached files. Switch to the 2B release once published:
+
+```bash
+export WEPM_MODEL=tencent/WePocketModel1.0-2B
+```
+
+To download ahead of time and keep weights in a local directory:
+
+```bash
+hf download tencent/WePocketModel1.0-4B --local-dir checkpoints/WePocketModel1.0-4B
+export WEPM_MODEL="$PWD/checkpoints/WePocketModel1.0-4B"
+```
+
+A local model directory is loaded without network access. For a cached repository ID, set `HF_HUB_OFFLINE=1` to prohibit network access. The [inference CLI](inference/README.md) also provides `--revision`, `--cache-dir`, and `--local-files-only`. Download the complete repository, not just the safetensors shards: auxiliary weights, runtime sources, tokenizer, processor and export metadata are required.
 
 ### NVIDIA GPU inference
 
@@ -200,4 +234,6 @@ If you find this work useful, please consider citing it:
 
 ## License
 
-TBD. Third-party components remain subject to their original licenses.
+The code made publicly available by Tencent in this repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the complete terms and Tencent copyright notice.
+
+This code license does not declare a license for model weights. Consult the license provided in each Hugging Face model repository for the applicable weight terms. Third-party components remain subject to their original licenses.

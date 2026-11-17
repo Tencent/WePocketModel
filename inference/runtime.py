@@ -10,6 +10,7 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 from common import load_contracts, load_runtime_sources, validate_architecture
+from model_source import resolve_model_path
 from PIL import Image
 from safetensors.torch import load_file
 from transformers import AutoProcessor, Qwen3_5ForConditionalGeneration
@@ -85,10 +86,7 @@ class UniModelTransformers:
     """
 
     def __init__(self, model_dir: str | Path, device="cuda:0"):
-        self.model_dir = Path(model_dir).resolve()
-        manifest = json.loads((self.model_dir / "export_complete.json").read_text())
-        if manifest.get("schema") != "wepm-nvidia-task-slots-v1":
-            raise ValueError("a complete WePM Hugging Face model directory is required")
+        self.model_dir = resolve_model_path(model_dir)
         self.config = json.loads((self.model_dir / "config.json").read_text())
         c = self.config
         self.contracts = load_contracts(self.model_dir / "runtime_sources")

@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-MODEL="${WEPM_MODEL:-$REPO_ROOT/checkpoints/huggingface}"
+MODEL="${WEPM_MODEL:-tencent/WePocketModel1.0-4B}"
 CASE="${1:-single_text}"
 INPUT="$SCRIPT_DIR/../demo_data/generation/$CASE.json"
 OUTPUT_DIR="${WEPM_OUTPUT_DIR:-$SCRIPT_DIR/results}"
@@ -17,5 +17,5 @@ fi
 mkdir -p "$OUTPUT_DIR"
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}" python "$REPO_ROOT/inference/infer.py" \
   --model "$MODEL" --task generate --content-json "$INPUT" \
-  --max-new-tokens 64 \
+  --min-free-gib "${WEPM_MIN_FREE_GIB:-14}" --max-new-tokens 64 \
   --output "$OUTPUT_DIR/$CASE-$(date -u +%Y%m%dT%H%M%SZ).json"

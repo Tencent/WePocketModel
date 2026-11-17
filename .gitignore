@@ -22,3 +22,10 @@ examples/**/results/
 
 # Raw demo footage: only the compressed MP4 under assert/ is tracked
 *.mov
+
+# Model weights are distributed through Hugging Face, not this repository
+/checkpoints/*/
+*.safetensors
+*.gguf
+/.cache/huggingface/
+/results/

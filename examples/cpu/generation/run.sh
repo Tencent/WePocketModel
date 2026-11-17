@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-MODEL="${WEPM_MODEL:-$REPO_ROOT/checkpoints/huggingface}"
+MODEL="${WEPM_MODEL:-tencent/WePocketModel1.0-4B}"
 CASE="${1:-single_text}"
 INPUT="$SCRIPT_DIR/../demo_data/generation/$CASE.json"
 OUTPUT_DIR="${WEPM_OUTPUT_DIR:-$SCRIPT_DIR/results}"

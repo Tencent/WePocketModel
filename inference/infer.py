@@ -9,6 +9,7 @@ from pathlib import Path
 
 import torch
 from common import write_json
+from model_source import DEFAULT_MODEL, resolve_model_path
 from runtime import UniModelTransformers, wait_for_gpu
 
 
@@ -46,10 +47,23 @@ def main(*, device="cuda:0"):
     parser = argparse.ArgumentParser(description=f"{__doc__} Device: {device}.")
     parser.add_argument(
         "--model",
-        type=Path,
-        required=True,
-        help="complete local Hugging Face model directory",
+        default=DEFAULT_MODEL,
+        help="Hugging Face model repo ID or complete local WePM export directory",
     )
+    parser.add_argument("--revision", help="Hub branch, tag or commit to download")
+    parser.add_argument("--cache-dir", type=Path, help="Hugging Face download cache")
+    parser.add_argument(
+        "--local-files-only",
+        action="store_true",
+        help="use cached/local files without network",
+    )
+    if not is_cpu:
+        parser.add_argument(
+            "--min-free-gib",
+            type=float,
+            default=14,
+            help="required free CUDA memory before loading (default: 14 GiB for 4B)",
+        )
     parser.add_argument(
         "--task", choices=["generate", "embed", "both", "decision"], default="generate"
     )
@@ -73,8 +87,7 @@ def main(*, device="cuda:0"):
     parser.add_argument(
         "--embedding-dim",
         type=int,
-        choices=[64, 128, 256, 512, 1024, 2048],
-        default=2048,
+        help="embedding dimension supported by the checkpoint (default: its full dimension)",
     )
     parser.add_argument(
         "--timeout",
@@ -86,6 +99,10 @@ def main(*, device="cuda:0"):
     args = parser.parse_args()
     if not 1 <= args.max_new_tokens <= 512 or not 1 <= args.timeout <= 1800:
         parser.error("max-new-tokens must be in [1, 512] and timeout in [1, 1800]")
+    if not is_cpu and not 0 < args.min_free_gib < float("inf"):
+        parser.error("min-free-gib must be finite and positive")
+    if args.embedding_dim is not None and args.embedding_dim < 1:
+        parser.error("embedding-dim must be positive")
     if is_cpu:
         if args.threads < 1:
             parser.error("threads must be positive")
@@ -113,6 +130,12 @@ def main(*, device="cuda:0"):
             content.append({"type": "text", "text": prompt})
     if args.output.exists():
         raise FileExistsError(args.output)
+    model_dir = resolve_model_path(
+        args.model,
+        revision=args.revision,
+        cache_dir=args.cache_dir,
+        local_files_only=args.local_files_only,
+    )
 
     def timeout_handler(_signum, _frame):
         raise TimeoutError(f"inference exceeded {args.timeout} seconds")
@@ -123,16 +146,19 @@ def main(*, device="cuda:0"):
     model = None
     try:
         if not is_cpu:
-            probe = wait_for_gpu()
+            probe = wait_for_gpu(min_free_gib=args.min_free_gib)
         backend = "hf"
-        model = UniModelTransformers(args.model, device=device)
+        model = UniModelTransformers(model_dir, device=device)
         result = {}
         if args.task in ("generate", "both"):
             result["generation"] = model.generate(content, args.max_new_tokens)
         if args.task in ("embed", "both"):
-            result["embedding"] = model.embed(
-                content, dims=[args.embedding_dim]
+            embedding_dim = (
+                args.embedding_dim
+                if args.embedding_dim is not None
+                else model.config["unimodel_embedding_dim"]
             )
+            result["embedding"] = model.embed(content, dims=[embedding_dim])
         if args.task == "decision":
             result["decision"] = model.decide(decision_request, args.image)
         write_json(args.output, result)

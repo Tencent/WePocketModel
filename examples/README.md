@@ -52,10 +52,22 @@ bash examples/cpu/embedding/run.sh
 bash examples/cpu/decision/run.sh
 ```
 
-The scripts use `checkpoints/huggingface` by default. To use another complete checkpoint, set:
+The scripts default to `tencent/WePocketModel1.0-4B`. The first online run downloads the complete Hugging Face snapshot; later runs reuse cached files. The corresponding model repository must be published before downloading.
+
+To select the 2B release once available:
 
 ```bash
-export WEPM_MODEL=/path/to/WePM-HF
+export WEPM_MODEL=tencent/WePocketModel1.0-2B
 ```
 
-GPU selection, CPU threads, and output location can be controlled with `CUDA_VISIBLE_DEVICES`, `WEPM_THREADS`, and `WEPM_OUTPUT_DIR` respectively. Results are written to timestamped JSON files under each task's `results/` directory by default.
+The shared runtime requires a compatible `task_slots_v1` export; 2B execution remains to be validated with the released checkpoint. The embedding examples explicitly request 1024 dimensions, which the chosen checkpoint must support.
+
+For a pre-downloaded local model:
+
+```bash
+export WEPM_MODEL=/path/to/WePocketModel1.0-4B
+```
+
+Local model directories are loaded without network access. Set `HF_HUB_OFFLINE=1` to use only the existing Hub cache when `WEPM_MODEL` is a repository ID. Use the [inference CLI](../inference/README.md) for `--revision`, `--cache-dir`, and `--local-files-only`.
+
+GPU selection, CPU threads, and output location can be controlled with `CUDA_VISIBLE_DEVICES`, `WEPM_THREADS`, and `WEPM_OUTPUT_DIR` respectively. GPU scripts also accept `WEPM_MIN_FREE_GIB`, defaulting to the conservative 4B threshold of 14 GiB free CUDA memory; lowering this threshold does not reduce actual model memory requirements. Results are written to timestamped JSON files under each task's `results/` directory by default.
