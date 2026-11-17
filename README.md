@@ -125,7 +125,7 @@ The runnable examples use the complete Hugging Face export and support generatio
 Clone the inference code and examples:
 
 ```bash
-git clone https://git.woa.com/seraphyuan/WePM.git
+git clone https://github.com/Tencent/WePocketModel
 cd WePM
 ```
 
