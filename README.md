@@ -1,11 +1,12 @@
-<h1 align="center">WePM: Hierarchical Conflict Reconciliation for Unified MLLMs</h1>
+<h1 align="center">WePocketModel</h1>
+
+<h3 align="center">Unified Pocket Models for In-App Multimodal Intelligence</h3>
 
 <p align="center">
-  <i>Unified Pocket Models for In-App Multimodal Intelligence</i>
-</p>
-
-<p align="center">
-  <b>Model weights</b>: <a href="https://huggingface.co/tencent/WePocketModel1.0-4B">4B</a> · <a href="https://huggingface.co/tencent/WePocketModel1.0-2B">2B</a> &nbsp;|&nbsp; <b>Technical Report</b>: TBD &nbsp;|&nbsp; <b>Code & Evaluation</b>: TBD
+  <img src="https://img.shields.io/badge/Paper-arXiv%20pending-EA4335?logo=arxiv&logoColor=white" alt="arXiv paper (link pending)">
+  <a href="https://huggingface.co/tencent/WePocketModel1.0-2B"><img src="https://img.shields.io/badge/Hugging%20Face-WePocketModel1.0--2B-FBBC04" alt="Hugging Face: WePocketModel1.0-2B"></a>
+  <a href="https://huggingface.co/tencent/WePocketModel1.0-4B"><img src="https://img.shields.io/badge/Hugging%20Face-WePocketModel1.0--4B-FBBC04" alt="Hugging Face: WePocketModel1.0-4B"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="License: Apache 2.0"></a>
 </p>
 
 ## Model Introduction
