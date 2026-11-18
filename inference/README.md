@@ -36,11 +36,11 @@ python -m pip install -r inference/requirements.txt
 
 ## Model download and local directory
 
-`--model` accepts a Hugging Face model repository ID or a local checkpoint directory. The default is `tencent/WePocketModel1.0-4B`. To switch between compatible 2B and 4B Transformers checkpoints, change `--model` to the desired checkpoint. On CPU, a directory containing a GGUF `bundle.json` selects the GGUF backend.
+`--model` accepts a Hugging Face model repository ID or a local checkpoint directory. The default is `tencent/WePocketModel1.0-4B`. To switch between compatible 2B and 4B Transformers checkpoints, change `--model` to the desired checkpoint. On CPU, a snapshot or directory containing a GGUF `bundle.json` selects the GGUF backend. See the [model table](../README.md#model-weights) for the 2B and 4B repository IDs in both formats.
 
 Both backends use the Python runtime included in this inference repository by default. If an export requires custom task code, review its `runtime_sources/` directory and pass `--trust-model-code` to execute that code with your user permissions. This applies to local directories and Hub snapshots. For Hub models, use `--revision` with the commit you reviewed.
 
-The first online run downloads a complete snapshot, including the auxiliary weights and runtime sources, into the standard Hugging Face cache. Later runs reuse cached files, but may check the repository for updates. Use `--revision` to pin a tag or commit, `--cache-dir` to select a cache location, and `--local-files-only` (or `HF_HUB_OFFLINE=1`) to prohibit network access. Downloads finish before the inference timeout starts and before CUDA resources are allocated. Download errors, including an unpublished repository or a missing offline cache, are not silently replaced by another model.
+The first online run downloads a complete snapshot, including the auxiliary weights and runtime sources, into the standard Hugging Face cache. Later runs reuse cached files, but may check the repository for updates. Use `--revision` to pin a tag or commit, `--cache-dir` to select a cache location, and `--local-files-only` (or `HF_HUB_OFFLINE=1`) to prohibit network access. Downloads finish before the inference timeout starts and before CUDA resources are allocated.
 
 To download ahead of time into a local directory:
 
@@ -81,7 +81,7 @@ python -m pip install -r inference/requirements-gguf.txt
 python inference/build_gguf.py
 ```
 
-Use a complete WePM GGUF bundle with `bundle.json`, the language weights, `multimodal-BF16.gguf`, and the accompanying tokenizer, processor, and runtime assets.
+Pass a GGUF Hugging Face repository ID, such as `tencent/WePocketModel1.0-4B-GGUF`, or a local directory. A complete WePM GGUF bundle contains `bundle.json`, the language weights, `multimodal-BF16.gguf`, and the accompanying tokenizer, processor, and runtime assets.
 
 ```bash
 python inference/infer_cpu.py --model /path/to/wepm-gguf --task both \

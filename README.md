@@ -12,7 +12,7 @@
 
 On-device AI applications rarely depend on a single capability. A personal assistant may need multimodal retrieval to find local content, generation to understand and respond, and decision making to route the next action. Deploying a separate specialist for each path duplicates vision encoders and language backbones, increasing resident memory, system complexity and the cost of keeping intelligence always available on device.
 
-**WePM** is a unified multimodal model family with planned **2B and 4B** releases, designed around a different principle: one compact vision–language backbone should support multiple capability families without sacrificing their individual quality. A single set of parameters provides:
+**WePM** is a unified multimodal model family with **2B and 4B** variants, designed around a different principle: one compact vision–language backbone should support multiple capability families without sacrificing their individual quality. A single set of parameters provides:
 
 - **Representation** — L2-normalized multimodal embeddings for image retrieval, text retrieval and candidate ranking.
 - **Generation** — OCR, image captioning, visual question answering, summarization and assistant responses.
@@ -94,129 +94,68 @@ https://github.com/user-attachments/assets/4384a5c4-30a7-42da-8fe3-750285c1fa3e
 
 ## Inference
 
-Runtime code and runnable cases are maintained in GitLab; the 2B and 4B model releases will be hosted separately on Hugging Face:
+This repository provides the inference runtime and runnable examples for text generation from text and images, multimodal embeddings, and structured decisions.
 
-| Model size | Hugging Face / safetensors |
-| --- | --- |
-| 4B | [WePocketModel1.0-4B](https://huggingface.co/tencent/WePocketModel1.0-4B) |
-| 2B | [WePocketModel1.0-2B](https://huggingface.co/tencent/WePocketModel1.0-2B) |
+### Model weights
 
-These are the planned release addresses; downloads require the corresponding repositories to be published.
+| Model size | Transformers (safetensors) | GGUF (CPU) |
+| --- | --- | --- |
+| 2B | [WePocketModel1.0-2B](https://huggingface.co/tencent/WePocketModel1.0-2B) | [WePocketModel1.0-2B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-2B-GGUF) |
+| 4B | [WePocketModel1.0-4B](https://huggingface.co/tencent/WePocketModel1.0-4B) | [WePocketModel1.0-4B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-4B-GGUF) |
 
-```text
-inference/              # Transformers inference and optional CPU GGUF backend
-examples/gpu/           # NVIDIA GPU task cases and input assets
-examples/cpu/           # CPU task cases and input assets
-checkpoints/            # Optional local downloads; model files are not tracked
-```
+Run with a Hugging Face model ID from the table or a local checkpoint directory. Set `WEPM_MODEL` in the examples or pass `--model` to the CLI. By default, the examples use `tencent/WePocketModel1.0-4B`.
 
-The runnable examples default to a complete Hugging Face export and support generation, embedding extraction, and structured decision. Generation cases cover single-text, single-image, and ordered text–image interleaving. The hardware figures below apply to WePM-4B. The inference CLI also loads compatible 2B or 4B raw training exports and supports [GGUF inference on CPU](inference/README.md#gguf-on-cpu).
+### Quick start
 
-### Hardware and precision (4B)
-
-| Device | Compute | Approximate weight memory | Recommended memory |
-| --- | --- | --- | --- |
-| NVIDIA GPU | BF16 | ≈8 GB | ≥16 GB GPU memory |
-| CPU | FP32 | ≈17 GiB | ≥24 GiB system memory |
-
-### Clone the code
-
-Clone the inference code and examples:
+Clone the repository and create a Python 3.10–3.13 environment.
 
 ```bash
 git clone https://github.com/Tencent/WePocketModel
 cd WePocketModel
-```
-
-The current branch does not bundle model weights or require Git LFS. Use a complete export from Hugging Face or point inference to an existing local checkpoint directory.
-
-### Installation
-
-Create a Python 3.10–3.13 environment:
-
-```bash
 python -m venv .venv
 source .venv/bin/activate
 ```
 
-NVIDIA GPU (CUDA 12.8 example):
+Install the PyTorch build for your device. On NVIDIA GPUs, use the CUDA wheel index compatible with your setup. This example uses CUDA 12.8.
 
 ```bash
 python -m pip install torch==2.10.0 torchvision==0.25.0 \
   --index-url https://download.pytorch.org/whl/cu128
 python -m pip install -r inference/requirements.txt
+
+bash examples/gpu/generation/run.sh single_text
 ```
 
-CPU:
+For Transformers on CPU, use the CPU wheel index.
 
 ```bash
 python -m pip install torch==2.10.0 torchvision==0.25.0 \
   --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -r inference/requirements.txt
+
+WEPM_MODEL=tencent/WePocketModel1.0-2B bash examples/cpu/generation/run.sh single_text
 ```
 
-### Model selection and download
-
-The scripts default to `tencent/WePocketModel1.0-4B`. The first online run downloads the complete export into the Hugging Face cache; subsequent runs reuse the cached files. Switch to the 2B release once published:
+For GGUF on CPU, use the same CPU PyTorch build, install the optional dependencies, and build the native runtime. The build requires Git, CMake 3.20 or later, and a C++17 compiler.
 
 ```bash
-export WEPM_MODEL=tencent/WePocketModel1.0-2B
+python -m pip install -r inference/requirements-gguf.txt
+python inference/build_gguf.py
+
+WEPM_MODEL=tencent/WePocketModel1.0-4B-GGUF bash examples/cpu/generation/run.sh single_text
 ```
 
-To download ahead of time and keep weights in a local directory:
+The first run with a Hugging Face model ID downloads a complete snapshot into the Hub cache. To use a local copy, see the [checkpoint download instructions](checkpoints/README.md). The generation scripts also accept `single_image` and `interleaved`. See the [runnable examples](examples/README.md) for embeddings and decisions and the [inference guide](inference/README.md) for CLI flags, multimodal inputs, and raw training exports.
 
-```bash
-hf download tencent/WePocketModel1.0-4B --local-dir checkpoints/WePocketModel1.0-4B
-export WEPM_MODEL="$PWD/checkpoints/WePocketModel1.0-4B"
-```
+### Hardware and precision (4B)
 
-A local model directory is loaded without network access. For a cached repository ID, set `HF_HUB_OFFLINE=1` to prohibit network access. The [inference CLI](inference/README.md) also provides `--revision`, `--cache-dir`, and `--local-files-only`. Download the complete export for its auxiliary weights, tokenizer, processor and metadata. Inference uses the Python runtime shipped with this repository by default. Use `--trust-model-code` only for a model whose custom runtime code you have reviewed.
+| Backend | Device | Precision | Memory guidance |
+| --- | --- | --- | --- |
+| Transformers | NVIDIA GPU | BF16 | ≈8.5 GiB of weights. 16 GiB VRAM recommended. |
+| Transformers | CPU | FP32 | ≈17 GiB of weights. 24 GiB system RAM recommended. |
+| GGUF | CPU | Q4_K_M or BF16 language weights, FP32 vision and task compute | The 4B Q4_K_M language file and shared multimodal weights occupy ≈3.19 GiB on disk. |
 
-### NVIDIA GPU inference
-
-#### Generation: single text, single image, or interleaved content
-
-```bash
-bash examples/gpu/generation/run.sh single_text
-bash examples/gpu/generation/run.sh single_image
-bash examples/gpu/generation/run.sh interleaved
-```
-
-#### Embedding extraction
-
-```bash
-bash examples/gpu/embedding/run.sh
-```
-
-#### Structured decision
-
-```bash
-bash examples/gpu/decision/run.sh
-```
-
-### CPU inference
-
-#### Generation: single text, single image, or interleaved content
-
-```bash
-bash examples/cpu/generation/run.sh single_text
-bash examples/cpu/generation/run.sh single_image
-bash examples/cpu/generation/run.sh interleaved
-```
-
-#### Embedding extraction
-
-```bash
-bash examples/cpu/embedding/run.sh
-```
-
-#### Structured decision
-
-```bash
-bash examples/cpu/decision/run.sh
-```
-
-Each command writes a timestamped JSON result, releases the model, and exits. See the [inference guide](inference/README.md) for the CLI and ordered multimodal input format, and the [examples guide](examples/README.md) for all runnable cases.
+Actual memory use depends on the input and context length. GGUF weight file size describes storage. Runtime RAM also includes the vision and task modules, context, and working buffers. See the [GGUF guide](inference/README.md#gguf-on-cpu) for variants and context settings.
 
 ## Citation
 

@@ -52,9 +52,9 @@ bash examples/cpu/embedding/run.sh
 bash examples/cpu/decision/run.sh
 ```
 
-The scripts default to `tencent/WePocketModel1.0-4B`. The first online run downloads the complete Hugging Face snapshot; later runs reuse cached files. The corresponding model repository must be published before downloading.
+The scripts default to `tencent/WePocketModel1.0-4B`. The first online run downloads the complete Hugging Face snapshot; later runs reuse cached files. See the [model table](../README.md#model-weights) for both formats.
 
-To select the 2B release once available:
+To select the 2B Transformers model:
 
 ```bash
 export WEPM_MODEL=tencent/WePocketModel1.0-2B
