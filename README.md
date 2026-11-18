@@ -36,7 +36,7 @@ Simply mixing heterogeneous tasks does not make them compatible. WePM identifies
 Together, these designs align visual evidence, learning signals and optimization dynamics within one compact backbone. Inference shares one vision encoder and one multimodal LLM backbone across all three tasks. Embedding appends a learned E slot, then projects and L2-normalizes its hidden state. Decision appends a separate learned J slot and maps its hidden state to candidate logits with a direct head. Generation uses autoregressive decoding without a soft slot.
 
 <p align="center">
-  <img src="assert/wepm_architecture.svg" width="1000" alt="WePM architecture with separate embedding and decision slots, slotless generation, and the MGVB, ULKD and SEMO components">
+  <img src="assert/wepm_architecture.png" width="1000" alt="WePM inference and training architecture with MGVB, ULKD and SEMO">
 </p>
 
 ## Performance Across Three Capability Families
