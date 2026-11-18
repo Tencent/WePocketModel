@@ -1,6 +1,6 @@
-<h1 align="center">WePocketModel</h1>
+<h1 align="center">Unified Pocket Models for In-App Multimodal Intelligence</h1>
 
-<h3 align="center">Unified Pocket Models for In-App Multimodal Intelligence</h3>
+<h3 align="center">WePocketModel (WePM)</h3>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Paper-arXiv%20pending-EA4335?logo=arxiv&logoColor=white" alt="arXiv paper (link pending)">
@@ -13,7 +13,7 @@
 
 On-device AI applications rarely depend on a single capability. A personal assistant may need multimodal retrieval to find local content, generation to understand and respond, and decision making to route the next action. Deploying a separate specialist for each path duplicates vision encoders and language backbones, increasing resident memory, system complexity and the cost of keeping intelligence always available on device.
 
-**WePM (WePocketModel1.0)** is a unified multimodal model family with planned **2B and 4B** releases, designed around a different principle: one compact vision–language backbone should support multiple capability families without sacrificing their individual quality. A single set of parameters provides:
+**WePM** is a unified multimodal model family with planned **2B and 4B** releases, designed around a different principle: one compact vision–language backbone should support multiple capability families without sacrificing their individual quality. A single set of parameters provides:
 
 - **Representation** — L2-normalized multimodal embeddings for image retrieval, text retrieval and candidate ranking.
 - **Generation** — OCR, image captioning, visual question answering, summarization and assistant responses.
