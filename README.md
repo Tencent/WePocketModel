@@ -75,9 +75,11 @@ WePM is intended as a shared local intelligence layer rather than a collection o
 
 A single resident WePM-4B supports the complete local workflow: it retrieves relevant personal content, understands multimodal context, generates a grounded response and makes the typed decision that routes the next step. Retrieval, generation and decision are composed within one model instead of being dispatched to separate services.
 
+<div align="center">
+
 https://github.com/user-attachments/assets/0ce0bf91-3d01-4c98-b255-9a0e3d4b6dcd
 
-[Open the MP4 file](assert/personal_agent_demo.mp4)
+</div>
 
 <!-- TBD: capture device, memory footprint, precision and latency numbers for this demo. -->
 
@@ -85,9 +87,11 @@ https://github.com/user-attachments/assets/0ce0bf91-3d01-4c98-b255-9a0e3d4b6dcd
 
 The same WePM-4B interprets game frames and interface text, retrieves local knowledge and interaction history, generates contextual suggestions, and performs option judgment or action routing. This turns one continuously resident model into a complete multimodal game assistant without separately loading vision, retrieval and decision models.
 
+<div align="center">
+
 https://github.com/user-attachments/assets/095ca925-6012-417c-8be2-eb50f7339f61
 
-[Open the MP4 file](assert/game_assistant_demo.mp4)
+</div>
 
 ## Inference
 
