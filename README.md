@@ -21,7 +21,7 @@ On-device AI applications rarely depend on a single capability. A personal assis
 In BF16, the shared 4B backbone occupies approximately 8 GB of weight memory. More importantly, it replaces several independently resident models with one common foundation for local multimodal applications.
 
 <p align="center">
-  <img src="assert/wepm_function.png" width="640" alt="WePM capabilities and applications">
+  <a href="assert/wepm_function.png"><img src="assert/wepm_function_preview.webp" width="640" alt="WePM capabilities and applications"></a>
 </p>
 
 ### Reconciling Conflicts in a Unified Model
@@ -43,7 +43,7 @@ Together, these designs align visual evidence, learning signals and optimization
 The evaluation includes both WePM-4B and WePM-2B across three capability families. **Embedding** covers 30 benchmarks and 10 models, **Generation** covers 39 benchmarks and 10 models, and **Decision (JEV)** covers 7 benchmarks and 22 models.
 
 <p align="center">
-  <img src="assert/performance.png" width="1080" alt="WePM-4B and WePM-2B benchmark comparisons across 30 Embedding, 39 Generation and 7 Decision (JEV) benchmarks, with WePM-4B ranked first overall in each category">
+  <a href="assert/performance.png"><img src="assert/performance_preview.webp" width="1080" alt="WePM-4B and WePM-2B benchmark comparisons across 30 Embedding, 39 Generation and 7 Decision (JEV) benchmarks, with WePM-4B ranked first overall in each category"></a>
 </p>
 
 WePM-4B ranks first overall in each capability family based on aggregate scores across its benchmarks. These results show that one shared 4B backbone can support competitive embedding, generation and decision capabilities together.
