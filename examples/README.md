@@ -60,7 +60,7 @@ To select the 2B release once available:
 export WEPM_MODEL=tencent/WePocketModel1.0-2B
 ```
 
-The shared runtime requires a compatible `task_slots_v1` export; 2B execution remains to be validated with the released checkpoint. The embedding examples explicitly request 1024 dimensions, which the chosen checkpoint must support.
+The shared runtime requires a compatible `task_slots_v1` checkpoint. The embedding examples explicitly request 1024 dimensions, which the chosen checkpoint must support.
 
 For a pre-downloaded local model:
 
@@ -70,4 +70,6 @@ export WEPM_MODEL=/path/to/WePocketModel1.0-4B
 
 Local model directories are loaded without network access. Set `HF_HUB_OFFLINE=1` to use only the existing Hub cache when `WEPM_MODEL` is a repository ID. Use the [inference CLI](../inference/README.md) for `--revision`, `--cache-dir`, and `--local-files-only`.
 
-GPU selection, CPU threads, and output location can be controlled with `CUDA_VISIBLE_DEVICES`, `WEPM_THREADS`, and `WEPM_OUTPUT_DIR` respectively. GPU scripts also accept `WEPM_MIN_FREE_GIB`, defaulting to the conservative 4B threshold of 14 GiB free CUDA memory; lowering this threshold does not reduce actual model memory requirements. Results are written to timestamped JSON files under each task's `results/` directory by default.
+CPU examples also accept a local WePM GGUF bundle via `WEPM_MODEL` after [building the native library](../inference/README.md#gguf-on-cpu).
+
+GPU selection, CPU threads, and output location can be controlled with `CUDA_VISIBLE_DEVICES`, `WEPM_THREADS`, and `WEPM_OUTPUT_DIR` respectively. Set `WEPM_MIN_FREE_GIB` to override the default CUDA loading threshold of checkpoint size plus 2 GiB. Results are written to timestamped JSON files under each task's `results/` directory by default.

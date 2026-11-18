@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Hugging Face G/E/J inference on CPU, then exit."""
+"""Run Transformers or GGUF WePM inference on CPU, then exit."""
 
 import os
 

@@ -1,14 +1,15 @@
-"""Transformers CPU/CUDA inference for the formal task_slots_v1 G/E/J model."""
+"""Shared WePM tasks and the Transformers CPU/CUDA backend."""
 
 from __future__ import annotations
 
 import io
-import json
+import math
 import time
 from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+from checkpoint import WePMCheckpoint, select_runtime_sources
 from common import load_contracts, load_runtime_sources, validate_architecture
 from model_source import resolve_model_path
 from PIL import Image
@@ -44,7 +45,9 @@ def prepare_content(content, prepare_image):
                 and not isinstance(source, bytes)
                 and Path(source).suffix.lower() in {".heic", ".heif"}
             ):
-                raise RuntimeError("HEIC input requires pillow-heif; install requirements.txt")
+                raise RuntimeError(
+                    "HEIC input requires pillow-heif; install requirements.txt"
+                )
             with Image.open(
                 io.BytesIO(source) if isinstance(source, bytes) else source
             ) as original:
@@ -59,25 +62,35 @@ def prepare_content(content, prepare_image):
     return processor_content, images, content_types
 
 
-def wait_for_gpu(min_free_gib=14, timeout=120):
+def wait_for_gpu(device, min_free_gib, timeout=120):
     """Wait for sufficient free CUDA memory before loading the model."""
-    probe = torch.empty(256 * 1024, device="cuda", dtype=torch.float32)
+    if not math.isfinite(min_free_gib) or min_free_gib < 0:
+        raise ValueError("minimum free CUDA memory must be finite and nonnegative")
     deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        free, total = torch.cuda.mem_get_info()
-        if free >= min_free_gib * 2**30:
+    minimum = min_free_gib * 2**30
+    while True:
+        free, total = torch.cuda.mem_get_info(device)
+        if total < minimum:
+            raise RuntimeError(
+                f"{device} has {total / 2**30:.2f} GiB total, below the "
+                f"{min_free_gib:.2f} GiB threshold. Use --min-free-gib to override."
+            )
+        if free >= minimum:
             print(
-                f"CUDA ready: {free / 2**30:.1f}/{total / 2**30:.1f} GiB free",
+                f"{device} ready: {free / 2**30:.2f}/{total / 2**30:.2f} GiB free "
+                f"(minimum {min_free_gib:.2f} GiB)",
                 flush=True,
             )
-            return probe
-        time.sleep(2)
-    raise RuntimeError(
-        f"CUDA memory did not reach {min_free_gib} GiB free within {timeout}s"
-    )
+            return
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise RuntimeError(
+                f"{device} did not reach {min_free_gib:.2f} GiB free within {timeout}s"
+            )
+        time.sleep(min(2, remaining))
 
 
-class UniModelTransformers:
+class WePMRuntime:
     """Qwen3.5 + MGVB + independent E/J slots and trained task heads.
 
     Each call accepts one ordered text/image request. Generation uses a
@@ -85,36 +98,22 @@ class UniModelTransformers:
     projection; J reads its own slot and applies the direct candidate-index head.
     """
 
-    def __init__(self, model_dir: str | Path, device="cuda:0"):
-        self.model_dir = resolve_model_path(model_dir)
-        self.config = json.loads((self.model_dir / "config.json").read_text())
+    def _stop_token_ids(self) -> set[int]:
+        stop_ids = set()
+        for value in (
+            self.config.get("eos_token_id"),
+            self.processor.tokenizer.eos_token_id,
+        ):
+            if isinstance(value, list):
+                stop_ids.update(value)
+            elif value is not None:
+                stop_ids.add(value)
+        return stop_ids
+
+    def _load_task_modules(self, runtime_sources, auxiliary):
         c = self.config
-        self.contracts = load_contracts(self.model_dir / "runtime_sources")
-        self.decision_config = validate_architecture(c, self.contracts)
-        self.device = torch.device(device)
-        if self.device.type not in {"cpu", "cuda"}:
-            raise ValueError("supported inference devices are cpu and cuda")
-        # FP32 also works on CPUs without native BF16 instructions. CUDA keeps
-        # the BF16 path used by training and the verified NVIDIA example.
-        self.dtype = torch.float32 if self.device.type == "cpu" else torch.bfloat16
-        self.model, self.loading_info = Qwen3_5ForConditionalGeneration.from_pretrained(
-            self.model_dir,
-            dtype=self.dtype,
-            device_map={"": str(self.device)},
-            attn_implementation="sdpa",
-            local_files_only=True,
-            output_loading_info=True,
-        )
-        for key in ("missing_keys", "unexpected_keys", "mismatched_keys", "error_msgs"):
-            if self.loading_info.get(key):
-                raise ValueError(f"incomplete HF load: {key}={self.loading_info[key]}")
-        self.loading_info = {
-            key: sorted(value) if isinstance(value, set) else value
-            for key, value in self.loading_info.items()
-        }
-        self.model.eval()
         self.processor = AutoProcessor.from_pretrained(
-            self.model_dir, local_files_only=True
+            self.model_dir, local_files_only=True, trust_remote_code=False
         )
         if not self.processor.chat_template:
             raise ValueError("missing saved training chat template")
@@ -122,9 +121,6 @@ class UniModelTransformers:
         self.slot_token_id = self.processor.tokenizer.pad_token_id
         if self.slot_token_id is None:
             self.slot_token_id = self.processor.tokenizer.eos_token_id
-        auxiliary = load_file(
-            self.model_dir / "unimodel_aux.safetensors", device=str(self.device)
-        )
         self.slots = {
             role: auxiliary.pop(f"unimodel.slot_pooler.{role}_slot").to(self.dtype)
             for role in ("embedding", "decision")
@@ -146,13 +142,7 @@ class UniModelTransformers:
             hidden,
         ):
             raise ValueError("direct decision head shape mismatch")
-        cls, self.get_rope_index = load_runtime_sources(
-            self.model_dir / "runtime_sources"
-        )
-        if not c.get("unimodel_mgvb_enable"):
-            raise ValueError(
-                "this example requires a UniModel checkpoint with MGVB enabled"
-            )
+        cls, self.get_rope_index = load_runtime_sources(runtime_sources)
         self.mgvb = cls(
             hidden,
             adapter_dim=c["unimodel_mgvb_adapter_dim"],
@@ -206,12 +196,10 @@ class UniModelTransformers:
         """Run native ViT/merger, then the learned MGVB in image order."""
         pixels = pixels.to(self.device, self.dtype)
         patches = torch.split(pixels, [int(n) for n in grids.prod(-1).tolist()])
-        native_features = []
-        for patch, grid in zip(patches, grids, strict=True):
-            visual = self.model.model.get_image_features(
-                patch, grid.unsqueeze(0), return_dict=True
-            )
-            native_features.append(visual.pooler_output[0])
+        native_features = [
+            self._vision_features(patch, grid.unsqueeze(0))
+            for patch, grid in zip(patches, grids, strict=True)
+        ]
         return self.mgvb(
             native_features,
             image_grid_thw=grids,
@@ -251,7 +239,7 @@ class UniModelTransformers:
             ids, native_lengths, compact_lengths = self._compact_image_tokens(
                 ids, grids
             )
-        embeddings = self.model.get_input_embeddings()(ids)
+        embeddings = self._token_embeddings(ids)
         # Only the appended position is a soft slot. Literal pad tokens in
         # the prompt and generated tokens always retain native embeddings.
         if slot_role is not None:
@@ -293,74 +281,15 @@ class UniModelTransformers:
         return ids, embeddings, position_ids, metadata
 
     @torch.inference_mode()
-    def generate(self, content, max_new_tokens=64):
-        """Greedy generation using the Transformers text model's native cache."""
-        if not 0 < max_new_tokens <= 512:
-            raise ValueError("max_new_tokens must be in [1, 512]")
-        start = time.monotonic()
-        ids, embeddings, positions, metadata = self._prepare_inputs(
-            content, task="generate"
-        )
-        result = self.model.model.language_model(
-            inputs_embeds=embeddings,
-            position_ids=positions,
-            use_cache=True,
-            return_dict=True,
-        )
-        cache = result.past_key_values
-        hidden = result.last_hidden_state[:, -1:, :]
-        rope_start = int(positions[1:].max()) + 1
-        stop_ids = {self.config["eos_token_id"], self.processor.tokenizer.eos_token_id}
-        generated = []
-        finish = "length"
-        for index in range(max_new_tokens):
-            logits = self.model.lm_head(hidden)[:, -1, :].float()
-            if not torch.isfinite(logits).all():
-                raise ValueError("nonfinite generation logits")
-            token = logits.argmax(dim=-1)
-            generated.append(int(token[0]))
-            if int(token[0]) in stop_ids:
-                finish = "eos"
-                break
-            if index + 1 == max_new_tokens:
-                break
-            pos = torch.full(
-                (4, 1, 1), rope_start + index, dtype=torch.long, device=self.device
-            )
-            pos[0] = ids.shape[1] + index
-            result = self.model.model.language_model(
-                input_ids=token[:, None],
-                position_ids=pos,
-                past_key_values=cache,
-                use_cache=True,
-                return_dict=True,
-            )
-            hidden, cache = result.last_hidden_state, result.past_key_values
-        return {
-            "text": self.processor.tokenizer.decode(
-                generated, skip_special_tokens=True
-            ),
-            "token_ids": generated,
-            "finish_reason": finish,
-            "seconds": time.monotonic() - start,
-            "input": metadata,
-        }
-
-    @torch.inference_mode()
     def embed(self, content, *, dims=None):
         """Return normalized embedding vectors at the requested MRL dimensions."""
         start = time.monotonic()
         _, embeddings, positions, metadata = self._prepare_inputs(
             content, task="embedding"
         )
-        result = self.model.model.language_model(
-            inputs_embeds=embeddings,
-            position_ids=positions,
-            use_cache=False,
-            return_dict=True,
-        )
+        hidden = self._last_hidden(embeddings, positions)
         # Training projects in the model dtype before FP32 L2 normalization.
-        projected = F.linear(result.last_hidden_state[:, -1, :], self.head).float()
+        projected = F.linear(hidden, self.head).float()
         if not torch.isfinite(projected).all() or projected.norm() == 0:
             raise ValueError("nonfinite or zero embedding")
         dims = dims or self.config["unimodel_embedding_mrl_dims"]
@@ -406,23 +335,159 @@ class UniModelTransformers:
         _, embeddings, positions, metadata = self._prepare_inputs(
             decision_content, task="decision"
         )
-        result = self.model.model.language_model(
-            inputs_embeds=embeddings,
-            position_ids=positions,
-            use_cache=False,
-            return_dict=True,
-        )
+        hidden = self._last_hidden(embeddings, positions)
         # The direct head maps h_J to option indices. E normalization and
         # physical padding rows must never enter the candidate distribution.
-        logits = F.linear(
-            result.last_hidden_state[:, -1, :], self.decision_head
-        ).float()[0, :count]
+        logits = F.linear(hidden, self.decision_head).float()[0, :count]
         if not torch.isfinite(logits).all():
             raise ValueError("nonfinite decision logits")
         probabilities = logits.softmax(dim=-1).cpu().tolist()
         return {
             **protocol.response_from_probabilities(value, probabilities),
             "candidate_count": count,
+            "seconds": time.monotonic() - start,
+            "input": metadata,
+        }
+
+
+class UniModelTransformers(WePMRuntime):
+    """Hugging Face backbone with the trained WePM task modules."""
+
+    def __init__(
+        self,
+        model_dir: str | Path,
+        device="cuda:0",
+        *,
+        min_free_gib=None,
+        trust_model_code=False,
+    ):
+        path = Path(model_dir).expanduser()
+        checkpoint = WePMCheckpoint(
+            path if path.is_dir() else resolve_model_path(model_dir)
+        )
+        self.model_dir = checkpoint.path
+        self.config = checkpoint.config
+        c = self.config
+        runtime_sources = select_runtime_sources(
+            self.model_dir, trust_model_code=trust_model_code
+        )
+        self.contracts = load_contracts(runtime_sources)
+        self.decision_config = validate_architecture(c, self.contracts)
+        self.device = torch.device(device)
+        if self.device.type not in {"cpu", "cuda"}:
+            raise ValueError("supported inference devices are cpu and cuda")
+        if self.device.type == "cuda":
+            if not torch.cuda.is_available():
+                raise RuntimeError(
+                    "CUDA is not available. Use inference/infer_cpu.py on CPU."
+                )
+            if min_free_gib is None:
+                # BF16 checkpoint size plus room for the CUDA context, cache and activations.
+                min_free_gib = checkpoint.weight_bytes / 2**30 + 2
+            wait_for_gpu(self.device, min_free_gib)
+        # FP32 also works on CPUs without native BF16 instructions. CUDA keeps
+        # the BF16 path used by training and the verified NVIDIA example.
+        self.dtype = torch.float32 if self.device.type == "cpu" else torch.bfloat16
+        with checkpoint.backbone_directory() as backbone_dir:
+            self.model, loading_info = Qwen3_5ForConditionalGeneration.from_pretrained(
+                backbone_dir,
+                dtype=self.dtype,
+                device_map={"": str(self.device)},
+                attn_implementation="sdpa",
+                local_files_only=True,
+                trust_remote_code=False,
+                use_safetensors=True,
+                output_loading_info=True,
+            )
+        for key in (
+            "missing_keys",
+            "unexpected_keys",
+            "mismatched_keys",
+            "error_msgs",
+            "conversion_errors",
+        ):
+            if loading_info.get(key):
+                raise ValueError(f"incomplete HF load: {key}={loading_info[key]}")
+        self.loading_info = {
+            key: sorted(value) if isinstance(value, set) else value
+            for key, value in loading_info.items()
+        }
+        self.model.eval()
+        auxiliary = load_file(checkpoint.auxiliary_path, device=str(self.device))
+        if checkpoint.indexed_auxiliary_keys and (
+            auxiliary.keys() != checkpoint.indexed_auxiliary_keys
+        ):
+            raise ValueError(
+                "training export task weights do not match the shard index"
+            )
+        self._load_task_modules(runtime_sources, auxiliary)
+
+    def _token_embeddings(self, ids):
+        return self.model.get_input_embeddings()(ids)
+
+    def _vision_features(self, pixels, grid):
+        visual = self.model.model.get_image_features(pixels, grid, return_dict=True)
+        return visual.pooler_output[0]
+
+    def _last_hidden(self, embeddings, positions):
+        result = self.model.model.language_model(
+            inputs_embeds=embeddings,
+            position_ids=positions,
+            use_cache=False,
+            return_dict=True,
+        )
+        return result.last_hidden_state[:, -1, :]
+
+    @torch.inference_mode()
+    def generate(self, content, max_new_tokens=64):
+        """Greedy generation using the Transformers text model's native cache."""
+        if not 0 < max_new_tokens <= 512:
+            raise ValueError("max_new_tokens must be in [1, 512]")
+        start = time.monotonic()
+        ids, embeddings, positions, metadata = self._prepare_inputs(
+            content, task="generate"
+        )
+        result = self.model.model.language_model(
+            inputs_embeds=embeddings,
+            position_ids=positions,
+            use_cache=True,
+            return_dict=True,
+        )
+        cache = result.past_key_values
+        hidden = result.last_hidden_state[:, -1:, :]
+        rope_start = int(positions[1:].max()) + 1
+        stop_ids = self._stop_token_ids()
+        generated = []
+        finish = "length"
+        for index in range(max_new_tokens):
+            logits = self.model.lm_head(hidden)[:, -1, :].float()
+            if not torch.isfinite(logits).all():
+                raise ValueError("nonfinite generation logits")
+            token = logits.argmax(dim=-1)
+            generated.append(int(token[0]))
+            if int(token[0]) in stop_ids:
+                finish = "eos"
+                break
+            if index + 1 == max_new_tokens:
+                break
+            pos = torch.full(
+                (4, 1, 1), rope_start + index, dtype=torch.long, device=self.device
+            )
+            pos[0] = ids.shape[1] + index
+            result = self.model.model.language_model(
+                input_ids=token[:, None],
+                position_ids=pos,
+                past_key_values=cache,
+                use_cache=True,
+                return_dict=True,
+            )
+            hidden, cache = result.last_hidden_state, result.past_key_values
+        return {
+            "text": self.processor.tokenizer.decode(
+                generated, skip_special_tokens=True
+            ),
+            "token_ids": generated,
+            "finish_reason": finish,
             "seconds": time.monotonic() - start,
             "input": metadata,
         }

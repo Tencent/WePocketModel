@@ -1,4 +1,4 @@
-"""File utilities and standalone imports of the checkpoint's model code."""
+"""File utilities and standalone imports of the selected WePM runtime."""
 
 from __future__ import annotations
 
@@ -6,16 +6,22 @@ import ast
 import hashlib
 import importlib.util
 import json
+import os
 import sys
 import types
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 
 def write_json(path: Path, payload) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
-    temporary.replace(path)
+    with TemporaryDirectory(dir=path.parent) as directory:
+        temporary = Path(directory) / "result.json"
+        with temporary.open("w", encoding="utf-8") as stream:
+            json.dump(payload, stream, indent=2, ensure_ascii=False)
+            stream.write("\n")
+        # Publish the complete file only if the destination is still available.
+        os.link(temporary, path)
 
 
 def sha256(path: Path) -> str:
@@ -37,7 +43,7 @@ def load_file(name: str, path: Path):
 
 
 def load_contracts(source: Path):
-    """Load the checkpoint's own task routing, decision protocol and geometry."""
+    """Load the selected runtime's task routing, decision protocol and geometry."""
     name = (
         "_wepm_nvidia_"
         + hashlib.sha256(str(source.resolve()).encode()).hexdigest()[:16]
@@ -64,7 +70,7 @@ def validate_architecture(config, contracts):
     contracts.decision_config.validate_task_slots(config, checkpoint=True)
     decision = contracts.decision_config.DecisionConfig.from_config(config)
     if decision.head_type != "direct":
-        raise ValueError("the NVIDIA example requires the trained direct decision head")
+        raise ValueError("the WePM runtime requires the trained direct decision head")
     if (
         config.get("unimodel_decision_input_profile")
         != contracts.decision_protocol.INPUT_PROFILE

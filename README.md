@@ -33,10 +33,10 @@ Simply mixing heterogeneous tasks does not make them compatible. WePM identifies
 - **ULKD (Unified Listwise Knowledge Distillation)** transfers generation and embedding knowledge from a frozen multimodal teacher into one student. On the generation path, on-policy token-level KL distillation supervises prefixes visited by the student itself; on the embedding path, candidate-list KL distillation and representation alignment teach the student candidate rankings and embedding structure.
 - **SEMO (Stable and Efficient Multitask Optimization)** accumulates fixed-weight task gradients through sequential forward/backward passes at the same model parameters, releasing each computation graph after backward before one joint optimizer update. This stabilizes optimization while avoiding the memory cost of retaining every task graph concurrently.
 
-Together, these designs align visual evidence, learning signals and optimization dynamics within one compact backbone. Inference uses one vision encoder, one shared multimodal LLM backbone and one shared soft slot, with projection-based embedding/decision readouts and autoregressive generation.
+Together, these designs align visual evidence, learning signals and optimization dynamics within one compact backbone. Inference shares one vision encoder and one multimodal LLM backbone across all three tasks. Embedding appends a learned E slot, then projects and L2-normalizes its hidden state. Decision appends a separate learned J slot and maps its hidden state to candidate logits with a direct head. Generation uses autoregressive decoding without a soft slot.
 
 <p align="center">
-  <img src="assert/last.png" width="640" alt="WePM shared inference substrate and MGVB, ULKD and SEMO training components">
+  <img src="assert/wepm_architecture.svg" width="1000" alt="WePM architecture with separate embedding and decision slots, slotless generation, and the MGVB, ULKD and SEMO components">
 </p>
 
 ## Performance Across Three Capability Families
@@ -75,11 +75,9 @@ WePM is intended as a shared local intelligence layer rather than a collection o
 
 A single resident WePM-4B supports the complete local workflow: it retrieves relevant personal content, understands multimodal context, generates a grounded response and makes the typed decision that routes the next step. Retrieval, generation and decision are composed within one model instead of being dispatched to separate services.
 
-<p align="center">
-  <video src="assert/personal_agent_demo.mp4" poster="assert/personal_agent_poster.jpg" width="640" controls muted loop playsinline></video>
-</p>
+https://github.com/user-attachments/assets/0ce0bf91-3d01-4c98-b255-9a0e3d4b6dcd
 
-If the player above is not rendered by your Markdown viewer, open the [MP4 demo](assert/personal_agent_demo.mp4) directly.
+[Open the MP4 file](assert/personal_agent_demo.mp4)
 
 <!-- TBD: capture device, memory footprint, precision and latency numbers for this demo. -->
 
@@ -87,11 +85,9 @@ If the player above is not rendered by your Markdown viewer, open the [MP4 demo]
 
 The same WePM-4B interprets game frames and interface text, retrieves local knowledge and interaction history, generates contextual suggestions, and performs option judgment or action routing. This turns one continuously resident model into a complete multimodal game assistant without separately loading vision, retrieval and decision models.
 
-<p align="center">
-  <video src="assert/game_assistant_demo.mp4" poster="assert/game_assistant_poster.jpg" width="640" controls muted loop playsinline></video>
-</p>
+https://github.com/user-attachments/assets/095ca925-6012-417c-8be2-eb50f7339f61
 
-If the player above is not rendered by your Markdown viewer, open the [MP4 demo](assert/game_assistant_demo.mp4) directly.
+[Open the MP4 file](assert/game_assistant_demo.mp4)
 
 ## Inference
 
@@ -105,13 +101,13 @@ Runtime code and runnable cases are maintained in GitLab; the 2B and 4B model re
 These are the planned release addresses; downloads require the corresponding repositories to be published.
 
 ```text
-inference/              # Hugging Face Transformers inference implementation
+inference/              # Transformers inference and optional CPU GGUF backend
 examples/gpu/           # NVIDIA GPU task cases and input assets
 examples/cpu/           # CPU task cases and input assets
 checkpoints/            # Optional local downloads; model files are not tracked
 ```
 
-The runnable examples use the complete Hugging Face export and support generation, embedding extraction, and structured decision. Generation cases cover single-text, single-image, and ordered text–image interleaving. The hardware figures below apply to WePM-4B. The shared loader requires the same `task_slots_v1` export contract, and 2B inference will be validated after its checkpoint is available.
+The runnable examples default to a complete Hugging Face export and support generation, embedding extraction, and structured decision. Generation cases cover single-text, single-image, and ordered text–image interleaving. The hardware figures below apply to WePM-4B. The inference CLI also loads compatible 2B or 4B raw training exports and supports [GGUF inference on CPU](inference/README.md#gguf-on-cpu).
 
 ### Hardware and precision (4B)
 
@@ -129,7 +125,7 @@ git clone https://github.com/Tencent/WePocketModel
 cd WePocketModel
 ```
 
-The current branch does not bundle model weights or require Git LFS. Inference resolves the complete 2B or 4B export from Hugging Face or an explicitly selected local directory.
+The current branch does not bundle model weights or require Git LFS. Use a complete export from Hugging Face or point inference to an existing local checkpoint directory.
 
 ### Installation
 
@@ -171,7 +167,7 @@ hf download tencent/WePocketModel1.0-4B --local-dir checkpoints/WePocketModel1.0
 export WEPM_MODEL="$PWD/checkpoints/WePocketModel1.0-4B"
 ```
 
-A local model directory is loaded without network access. For a cached repository ID, set `HF_HUB_OFFLINE=1` to prohibit network access. The [inference CLI](inference/README.md) also provides `--revision`, `--cache-dir`, and `--local-files-only`. Download the complete repository, not just the safetensors shards: auxiliary weights, runtime sources, tokenizer, processor and export metadata are required.
+A local model directory is loaded without network access. For a cached repository ID, set `HF_HUB_OFFLINE=1` to prohibit network access. The [inference CLI](inference/README.md) also provides `--revision`, `--cache-dir`, and `--local-files-only`. Download the complete export for its auxiliary weights, tokenizer, processor and metadata. Inference uses the Python runtime shipped with this repository by default. Use `--trust-model-code` only for a model whose custom runtime code you have reviewed.
 
 ### NVIDIA GPU inference
 

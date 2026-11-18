@@ -7,6 +7,10 @@ MODEL="${WEPM_MODEL:-tencent/WePocketModel1.0-4B}"
 CASE="${1:-single_text}"
 INPUT="$SCRIPT_DIR/../demo_data/generation/$CASE.json"
 OUTPUT_DIR="${WEPM_OUTPUT_DIR:-$SCRIPT_DIR/results}"
+GPU_ARGS=()
+if [[ -n "${WEPM_MIN_FREE_GIB:-}" ]]; then
+  GPU_ARGS=(--min-free-gib "$WEPM_MIN_FREE_GIB")
+fi
 
 if [[ ! -f "$INPUT" ]]; then
   echo "Unknown generation case: $CASE" >&2
@@ -17,5 +21,5 @@ fi
 mkdir -p "$OUTPUT_DIR"
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}" python "$REPO_ROOT/inference/infer.py" \
   --model "$MODEL" --task generate --content-json "$INPUT" \
-  --min-free-gib "${WEPM_MIN_FREE_GIB:-14}" --max-new-tokens 64 \
+  "${GPU_ARGS[@]}" --max-new-tokens 64 \
   --output "$OUTPUT_DIR/$CASE-$(date -u +%Y%m%dT%H%M%SZ).json"
