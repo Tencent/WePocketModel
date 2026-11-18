@@ -41,13 +41,13 @@ Together, these designs align visual evidence, learning signals and optimization
 
 ## Performance Across Three Capability Families
 
-WePM is evaluated across all three capability families rather than through a single aggregate score: **Embedding** covers 30 benchmarks and 9 models, **Generation** covers 39 benchmarks and 9 models, and **Decision (JEV)** covers 7 benchmarks and 21 models. The figure summarizes the benchmark-level comparisons and reports WePM's overall rank within each evaluation pool.
+The evaluation includes both WePM-4B and WePM-2B across three capability families. **Embedding** covers 30 benchmarks and 10 models, **Generation** covers 39 benchmarks and 10 models, and **Decision (JEV)** covers 7 benchmarks and 22 models.
 
 <p align="center">
-  <img src="assert/performance.png" width="1080" alt="Benchmark-level comparisons and overall WePM ranking across 30 Embedding, 39 Generation and 7 Decision (JEV) benchmarks">
+  <img src="assert/performance.png" width="1080" alt="WePM-4B and WePM-2B benchmark comparisons across 30 Embedding, 39 Generation and 7 Decision (JEV) benchmarks, with WePM-4B ranked first overall in each category">
 </p>
 
-WePM ranks first overall in each of the three evaluation pools. These results show that one shared 4B backbone can support competitive embedding, generation and decision capabilities together. The ranking is an overall result within each capability family, not a claim that WePM leads every individual benchmark.
+WePM-4B ranks first overall in each capability family based on aggregate scores across its benchmarks. These results show that one shared 4B backbone can support competitive embedding, generation and decision capabilities together.
 
 ## Heterogeneous Capability Density (HCD)
 
@@ -60,10 +60,10 @@ Benchmark quality alone does not capture the central constraint of on-device dep
 HCD counts capability families rather than individual benchmarks. For example, OCR, captioning and visual question answering all contribute to Generation instead of being counted as three separate capabilities. A higher HCD therefore indicates that a model delivers broader and stronger usable intelligence per unit of resident memory—not merely that it has been evaluated on more tasks.
 
 <p align="center">
-  <img src="assert/memory_vs_quality.png" width="640" alt="Harmonic performance versus BF16 weight memory for WePM (HCD=0.244) and six independent three-model compositions">
+  <img src="assert/memory_vs_quality.png" width="640" alt="Harmonic performance versus BF16 weight memory for WePM-4B (HCD=0.244) and six independent three-model compositions">
 </p>
 
-The comparison pairs independent generation and embedding models with the same d3-4.5B decision model. WePM reaches approximately 65.1% harmonic performance with about 8 GB of BF16 weight memory, yielding an HCD of 0.244. The six independent three-model compositions require roughly 21–43 GB, with harmonic performance of approximately 64.2–64.8% and HCD values of 0.045–0.092. In this comparison, WePM achieves higher harmonic performance with substantially less weight memory, delivering approximately 2.7–5.4× the HCD of the independent compositions.
+The comparison pairs independent generation and embedding models with the same d3-4.5B decision model. WePM-4B reaches approximately 65.1% harmonic performance with about 8 GB of BF16 weight memory, yielding an HCD of 0.244. The six independent three-model compositions require roughly 21–43 GB, with harmonic performance of approximately 64.2–64.8% and HCD values of 0.045–0.092. In this comparison, WePM-4B achieves higher harmonic performance with substantially less weight memory, delivering approximately 2.7–5.4× the HCD of the independent compositions.
 
 The memory values and HCD comparison above use BF16 weights only, not full runtime memory. KV cache, activations, framework overhead and runtime fragmentation are excluded.
 
@@ -111,7 +111,7 @@ examples/cpu/           # CPU task cases and input assets
 checkpoints/            # Optional local downloads; model files are not tracked
 ```
 
-The runnable examples use the complete Hugging Face export and support generation, embedding extraction, and structured decision. Generation cases cover single-text, single-image, and ordered text–image interleaving. The current results and hardware measurements in this README are for the 4B model, not the 2B release. The shared loader requires the same task_slots_v1 export contract; 2B inference will be validated after its checkpoint is available.
+The runnable examples use the complete Hugging Face export and support generation, embedding extraction, and structured decision. Generation cases cover single-text, single-image, and ordered text–image interleaving. The hardware figures below apply to WePM-4B. The shared loader requires the same `task_slots_v1` export contract, and 2B inference will be validated after its checkpoint is available.
 
 ### Hardware and precision (4B)
 
@@ -126,7 +126,7 @@ Clone the inference code and examples:
 
 ```bash
 git clone https://github.com/Tencent/WePocketModel
-cd WePM
+cd WePocketModel
 ```
 
 The current branch does not bundle model weights or require Git LFS. Inference resolves the complete 2B or 4B export from Hugging Face or an explicitly selected local directory.
