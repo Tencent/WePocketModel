@@ -76,7 +76,7 @@ A single resident WePM-4B supports the complete local workflow: it retrieves rel
 
 <div align="center">
 
-https://github.com/user-attachments/assets/0ce0bf91-3d01-4c98-b255-9a0e3d4b6dcd
+https://github.com/user-attachments/assets/1bfb56b3-5f62-4ce0-a26e-a90e34bd8449
 
 </div>
 
@@ -88,7 +88,7 @@ The same WePM-4B interprets game frames and interface text, retrieves local know
 
 <div align="center">
 
-https://github.com/user-attachments/assets/095ca925-6012-417c-8be2-eb50f7339f61
+https://github.com/user-attachments/assets/4384a5c4-30a7-42da-8fe3-750285c1fa3e
 
 </div>
 
