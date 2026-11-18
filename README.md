@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Paper-arXiv%20pending-EA4335?logo=arxiv&logoColor=white" alt="arXiv paper (link pending)">
-  <a href="https://huggingface.co/collections/tencent/wepocketmodel"><img src="https://img.shields.io/badge/Hugging%20Face-WePocketModel-FBBC04?logo=huggingface&logoColor=white" alt="Hugging Face: WePocketModel"></a>
+  <a href="https://huggingface.co/collections/tencent/wepocketmodel"><img src="assert/hf_badge.png" width="199" height="20" alt="Hugging Face: WePocketModel"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="License: Apache 2.0"></a>
 </p>
 
