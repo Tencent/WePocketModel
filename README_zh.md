@@ -1,9 +1,9 @@
-<h1 align="center">面向应用内多模态智能的统一轻量模型</h1>
+<h1 align="center">面向应用内多模态智能的统一口袋模型</h1>
 
 <h3 align="center">WePocketModel (WePM)</h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Paper-arXiv%20pending-EA4335?logo=arxiv&logoColor=white" alt="arXiv 论文（链接待更新）">
+  <a href="https://github.com/Tencent/WePocketModel/blob/main/WePM_TechReport.pdf"><img src="https://img.shields.io/badge/Paper-Technical%20Report-EA4335" alt="技术报告（PDF）"></a>
   <a href="https://huggingface.co/collections/tencent/wepocketmodel"><img src="assert/hf_badge.png" width="199" height="20" alt="Hugging Face: WePocketModel"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="许可证：Apache 2.0"></a>
 </p>
