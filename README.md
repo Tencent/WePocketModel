@@ -8,6 +8,10 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="License: Apache 2.0"></a>
 </p>
 
+<p align="center">
+  <strong><a href="https://github.com/Tencent/WePocketModel/blob/7702be7732464cff64971dda73f6f2590f44ba21/README.md">WePM 1.0</a></strong>
+</p>
+
 ## News
 
 - **2026-11-19** · Added [WePM 1.0 model links](#model-weights) for 2B and 4B in Transformers and GGUF formats, along with a [quick start](#quick-start) for NVIDIA GPU and CPU inference.
