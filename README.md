@@ -8,6 +8,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="License: Apache 2.0"></a>
 </p>
 
+## News
+
+- **2026-11-19** · Added [WePM 1.0 model links](#model-weights) for 2B and 4B in Transformers and GGUF formats, along with a [quick start](#quick-start) for NVIDIA GPU and CPU inference.
+- **2026-11-18** · Added [CPU GGUF inference](inference/README.md#gguf-on-cpu) for generation, multimodal embeddings, and structured decisions.
+
 ## Model Introduction
 
 On-device AI applications rarely depend on a single capability. A personal assistant may need multimodal retrieval to find local content, generation to understand and respond, and decision making to route the next action. Deploying a separate specialist for each path duplicates vision encoders and language backbones, increasing resident memory, system complexity and the cost of keeping intelligence always available on device.
