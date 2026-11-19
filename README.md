@@ -12,6 +12,10 @@
   <strong><a href="https://github.com/Tencent/WePocketModel/blob/7702be7732464cff64971dda73f6f2590f44ba21/README.md">WePM 1.0</a></strong>
 </p>
 
+<p align="center">
+  <sub><a href="#model-introduction">Overview</a> &nbsp;·&nbsp; <a href="#quick-start">Get started</a> &nbsp;·&nbsp; <a href="#project-resources">Resources</a> &nbsp;|&nbsp; <a href="README_zh.md">中文</a> · English</sub>
+</p>
+
 ## News
 
 - **2026-11-19** · Added [WePM 1.0 model links](#model-weights) for 2B and 4B in Transformers and GGUF formats, along with a [quick start](#quick-start) for NVIDIA GPU and CPU inference.
@@ -165,6 +169,10 @@ The first run with a Hugging Face model ID downloads a complete snapshot into th
 | GGUF | CPU | Q4_K_M or BF16 language weights, FP32 vision and task compute | The 4B Q4_K_M language file and shared multimodal weights occupy ≈3.19 GiB on disk. |
 
 Actual memory use depends on the input and context length. GGUF weight file size describes storage. Runtime RAM also includes the vision and task modules, context, and working buffers. See the [GGUF guide](inference/README.md#gguf-on-cpu) for variants and context settings.
+
+## Project resources
+
+[Model weights](#model-weights) · [Checkpoint downloads](checkpoints/README.md) · [Inference guide](inference/README.md) · [Runnable examples](examples/README.md)
 
 ## Citation
 
