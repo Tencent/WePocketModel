@@ -18,8 +18,7 @@
 
 ## News
 
-- **2026-11-19** · Added [WePM 1.0 model links](#model-weights) for 2B and 4B in Transformers and GGUF formats, along with a [quick start](#quick-start) for NVIDIA GPU and CPU inference.
-- **2026-11-18** · Added [CPU GGUF inference](inference/README.md#gguf-on-cpu) for generation, multimodal embeddings, and structured decisions.
+- **2026-11-23** · **WePM 1.0 is now open source.** Download the 2B and 4B [model weights](#model-weights) in Transformers and GGUF formats, try the [inference quick start](#quick-start), and read the [technical report](https://arxiv.org/abs/2611.27365).
 
 ## Model Introduction
 

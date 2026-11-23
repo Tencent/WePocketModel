@@ -18,8 +18,7 @@
 
 ## 动态
 
-- **2026-11-19** · 补齐了 WePM 1.0 的 [2B 和 4B 模型链接](#模型权重)，涵盖 Transformers 和 GGUF 两种格式，并提供了 NVIDIA GPU 和 CPU 推理的[快速开始](#快速开始)。
-- **2026-11-18** · 加入 [CPU GGUF 推理](inference/README.md#gguf-on-cpu)，支持生成、多模态嵌入和结构化决策。
+- **2026-11-23** · **WePM 1.0 正式开源。** 2B 和 4B 的[模型权重](#模型权重)均提供 Transformers 和 GGUF 格式。欢迎查看[推理快速开始](#快速开始)和[技术报告](https://arxiv.org/abs/2611.27365)。
 
 ## 模型介绍
 
