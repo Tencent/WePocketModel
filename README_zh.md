@@ -3,7 +3,7 @@
 <h3 align="center">WePocketModel (WePM)</h3>
 
 <p align="center">
-  <a href="https://github.com/Tencent/WePocketModel/blob/main/WePM_TechReport.pdf"><img src="https://img.shields.io/badge/Paper-Technical%20Report-EA4335" alt="技术报告（PDF）"></a>
+  <a href="https://arxiv.org/abs/2611.27365"><img src="https://img.shields.io/badge/Paper-Technical%20Report-EA4335" alt="技术报告（PDF）"></a>
   <a href="https://huggingface.co/collections/tencent/wepocketmodel"><img src="assert/hf_badge.png" width="199" height="20" alt="Hugging Face: WePocketModel"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="许可证：Apache 2.0"></a>
 </p>
@@ -182,7 +182,7 @@ WEPM_MODEL=tencent/WePocketModel1.0-4B-GGUF bash examples/cpu/generation/run.sh 
   author = {{WeChat AI, Tencent}},
   year = {2026},
   howpublished = {Technical Report},
-  url = {TBD}
+  url = {https://arxiv.org/abs/2611.27365}
 }
 ```
 
