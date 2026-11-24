@@ -18,6 +18,8 @@
 
 ## News
 
+- **2026-11-24** · WePM featured by [Syncedreview (JiQiZhiXin)](https://mp.weixin.qq.com/s/uh-WMe_btZcI2qzNl7WOww) and now available on [ModelScope](https://www.modelscope.ai/collections/WeChat-Vision/WePocketModel).
+
 - **2026-11-23** · **WePM 1.0 is now open source.** Download the 2B and 4B [model weights](#model-weights) in Transformers and GGUF formats, try the [inference quick start](#quick-start), and read the [technical report](https://arxiv.org/abs/2611.27365).
 
 ## Model Introduction

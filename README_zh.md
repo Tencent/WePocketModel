@@ -18,6 +18,8 @@
 
 ## 动态
 
+- **2026-11-24** · **WePM 获[机器之心](https://mp.weixin.qq.com/s/uh-WMe_btZcI2qzNl7WOww)报道，并同步上线 [ModelScope](https://www.modelscope.ai/collections/WeChat-Vision/WePocketModel)。**
+
 - **2026-11-23** · **WePM 1.0 正式开源。** 2B 和 4B 的[模型权重](#模型权重)均提供 Transformers 和 GGUF 格式。欢迎查看[推理快速开始](#快速开始)和[技术报告](https://arxiv.org/abs/2611.27365)。
 
 ## 模型介绍
