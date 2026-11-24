@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <strong><a href="https://github.com/Tencent/WePocketModel/blob/b62890f565342bbda76c7442b934e23cfb420f4a/README.md">WePM 1.0</a></strong>
+  <strong><a href="https://github.com/Tencent/WePocketModel/blob/fb63792e3798bf35961d4fa42cdc96e94e8a9efd/README.md">WePM 1.0</a></strong>
 </p>
 
 <p align="center">
