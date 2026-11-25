@@ -18,6 +18,8 @@
 
 ## 动态
 
+- **2026-11-25** · WePM 1.0 的 [2B](https://huggingface.co/tencent/WePocketModel1.0-2B-MLX) 和 [4B](https://huggingface.co/tencent/WePocketModel1.0-4B-MLX) 已完成 MLX 适配，支持在 Apple silicon 上推理。
+
 - **2026-11-24** · **WePM 获[机器之心](https://mp.weixin.qq.com/s/uh-WMe_btZcI2qzNl7WOww)报道，并同步上线 [ModelScope](https://www.modelscope.ai/collections/WeChat-Vision/WePocketModel)。**
 
 - **2026-11-23** · **WePM 1.0 正式开源。** 2B 和 4B 的[模型权重](#模型权重)均提供 Transformers 和 GGUF 格式。欢迎查看[推理快速开始](#快速开始)和[技术报告](https://arxiv.org/abs/2611.27365)。
@@ -110,12 +112,12 @@ https://github.com/user-attachments/assets/4384a5c4-30a7-42da-8fe3-750285c1fa3e
 
 ### 模型权重
 
-| 模型尺寸 | Transformers (safetensors) | GGUF (CPU) |
-| --- | --- | --- |
-| 2B | [WePocketModel1.0-2B](https://huggingface.co/tencent/WePocketModel1.0-2B) | [WePocketModel1.0-2B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-2B-GGUF) |
-| 4B | [WePocketModel1.0-4B](https://huggingface.co/tencent/WePocketModel1.0-4B) | [WePocketModel1.0-4B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-4B-GGUF) |
+| 模型尺寸 | Transformers (safetensors) | GGUF (CPU) | MLX（Apple silicon） |
+| --- | --- | --- | --- |
+| 2B | [WePocketModel1.0-2B](https://huggingface.co/tencent/WePocketModel1.0-2B) | [WePocketModel1.0-2B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-2B-GGUF) | [WePocketModel1.0-2B-MLX](https://huggingface.co/tencent/WePocketModel1.0-2B-MLX) |
+| 4B | [WePocketModel1.0-4B](https://huggingface.co/tencent/WePocketModel1.0-4B) | [WePocketModel1.0-4B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-4B-GGUF) | [WePocketModel1.0-4B-MLX](https://huggingface.co/tencent/WePocketModel1.0-4B-MLX) |
 
-可以指定表中的 Hugging Face 模型 ID，也可以使用本地 checkpoint 目录。运行脚本示例时设置 `WEPM_MODEL`，使用推理 CLI 时传入 `--model`。示例默认使用 `tencent/WePocketModel1.0-4B`。
+Transformers 和 GGUF 可以指定各自的 Hugging Face 模型 ID，也可以使用本地 checkpoint 目录。运行脚本示例时设置 `WEPM_MODEL`，使用推理 CLI 时传入 `--model`。示例默认使用 `tencent/WePocketModel1.0-4B`。MLX 使用对应 Hugging Face 仓库内的自包含运行时，见 [MLX（Apple silicon）](#mlxapple-silicon)。
 
 ### 快速开始
 
@@ -158,6 +160,35 @@ WEPM_MODEL=tencent/WePocketModel1.0-4B-GGUF bash examples/cpu/generation/run.sh 
 ```
 
 首次使用 Hugging Face 模型 ID 时会将完整快照下载到 Hub 缓存。使用本地副本的方式见[权重下载指南](checkpoints/README.md)。生成脚本也支持 `single_image` 和 `interleaved`。嵌入和决策的调用方式见[可运行示例](examples/README.md)，CLI 参数、多模态输入和原始训练导出见[推理指南](inference/README.md)。
+
+### MLX（Apple silicon）
+
+直接使用对应 Hugging Face 仓库内的运行时，即可在 Apple silicon（M 系列 Mac）上执行文本生成、多模态嵌入和结构化决策（JEV）。建议单独创建环境，不与上面的 PyTorch 环境混用。
+
+```bash
+python -m venv .venv-mlx
+source .venv-mlx/bin/activate
+python -m pip install huggingface_hub
+hf download tencent/WePocketModel1.0-2B-MLX --local-dir WePocketModel1.0-2B-MLX
+cd WePocketModel1.0-2B-MLX
+python -m pip install -r requirements.txt
+
+python runtime/infer_mlx.py --model . --task generate \
+  --prompt "用一句话介绍 WePM。" \
+  --max-new-tokens 64 --output out/generation.json
+
+python runtime/infer_mlx.py --model . --task embed \
+  --prompt "寻找相似的风景照片。" \
+  --embedding-dim 1024 --output out/embedding.json
+
+python runtime/infer_mlx.py --model . --task decision \
+  --decision-json request.json \
+  --output out/decision.json
+```
+
+`request.json` 遵循 SystemOne 协议，可直接以本仓库的[示例请求](examples/gpu/demo_data/decision/request.json)为模板；`choice`、`score`、`noul` 三种写法见 MLX 模型卡。
+
+使用 4B 时，将下载命令和目录名中的 `WePocketModel1.0-2B-MLX` 替换为 `WePocketModel1.0-4B-MLX`。生成或嵌入命令增加 `--image /path/to/image.jpg` 即可输入图片。MLX 模型仓库包含版本固定的依赖与详细说明；其运行时独立于本 GitHub 仓库现有的 Transformers/GGUF CLI。
 
 ### 硬件与精度（4B）
 

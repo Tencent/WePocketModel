@@ -1,6 +1,8 @@
 # WePM Inference
 
-WePM `task_slots_v1` runs with Transformers on CPU or CUDA and with a native GGUF language backend on CPU. Both backends use the WePM vision encoder, MGVB, independent embedding and decision slots, and trained task heads.
+WePM `task_slots_v1` runs with Transformers on CPU or CUDA, with a native GGUF language backend on CPU, and with MLX on Apple silicon. Every backend uses the WePM vision encoder, MGVB, independent embedding and decision slots, and trained task heads.
+
+The MLX runtime is not part of this directory: it ships inside the `-MLX` model repositories together with the converted weights. See [MLX on Apple silicon](../README.md#mlx-on-apple-silicon).
 
 Supported tasks:
 

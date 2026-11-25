@@ -72,4 +72,23 @@ Local model directories are loaded without network access. Set `HF_HUB_OFFLINE=1
 
 CPU examples also accept a local WePM GGUF bundle via `WEPM_MODEL` after [building the native library](../inference/README.md#gguf-on-cpu).
 
+## Apple silicon (MLX)
+
+The MLX examples are shipped inside the `-MLX` model repositories rather than in this directory, because that runtime is self-contained:
+
+```bash
+hf download tencent/WePocketModel1.0-4B-MLX --local-dir WePocketModel1.0-4B-MLX
+cd WePocketModel1.0-4B-MLX
+python -m pip install -r requirements.txt
+
+python runtime/infer_mlx.py --model . --task generate --prompt "Describe WePM in one sentence." \
+    --max-new-tokens 64 --output out/generation.json
+python runtime/infer_mlx.py --model . --task embed --image /path/to/image.jpg \
+    --embedding-dim 1024 --output out/embedding.json
+python runtime/infer_mlx.py --model . --task decision --decision-json request.json \
+    --output out/decision.json
+```
+
+See [MLX on Apple silicon](../README.md#mlx-on-apple-silicon) for setup and the decision request format.
+
 GPU selection, CPU threads, and output location can be controlled with `CUDA_VISIBLE_DEVICES`, `WEPM_THREADS`, and `WEPM_OUTPUT_DIR` respectively. Set `WEPM_MIN_FREE_GIB` to override the default CUDA loading threshold of checkpoint size plus 2 GiB. Results are written to timestamped JSON files under each task's `results/` directory by default.

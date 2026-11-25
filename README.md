@@ -18,6 +18,8 @@
 
 ## News
 
+- **2026-11-25** · WePM 1.0 [2B](https://huggingface.co/tencent/WePocketModel1.0-2B-MLX) and [4B](https://huggingface.co/tencent/WePocketModel1.0-4B-MLX) now support MLX inference on Apple silicon.
+
 - **2026-11-24** · WePM featured by [Syncedreview (JiQiZhiXin)](https://mp.weixin.qq.com/s/uh-WMe_btZcI2qzNl7WOww) and now available on [ModelScope](https://www.modelscope.ai/collections/WeChat-Vision/WePocketModel).
 
 - **2026-11-23** · **WePM 1.0 is now open source.** Download the 2B and 4B [model weights](#model-weights) in Transformers and GGUF formats, try the [inference quick start](#quick-start), and read the [technical report](https://arxiv.org/abs/2611.27365).
@@ -112,12 +114,12 @@ This repository provides the inference runtime and runnable examples for text ge
 
 ### Model weights
 
-| Model size | Transformers (safetensors) | GGUF (CPU) |
-| --- | --- | --- |
-| 2B | [WePocketModel1.0-2B](https://huggingface.co/tencent/WePocketModel1.0-2B) | [WePocketModel1.0-2B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-2B-GGUF) |
-| 4B | [WePocketModel1.0-4B](https://huggingface.co/tencent/WePocketModel1.0-4B) | [WePocketModel1.0-4B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-4B-GGUF) |
+| Model size | Transformers (safetensors) | GGUF (CPU) | MLX (Apple silicon) |
+| --- | --- | --- | --- |
+| 2B | [WePocketModel1.0-2B](https://huggingface.co/tencent/WePocketModel1.0-2B) | [WePocketModel1.0-2B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-2B-GGUF) | [WePocketModel1.0-2B-MLX](https://huggingface.co/tencent/WePocketModel1.0-2B-MLX) |
+| 4B | [WePocketModel1.0-4B](https://huggingface.co/tencent/WePocketModel1.0-4B) | [WePocketModel1.0-4B-GGUF](https://huggingface.co/tencent/WePocketModel1.0-4B-GGUF) | [WePocketModel1.0-4B-MLX](https://huggingface.co/tencent/WePocketModel1.0-4B-MLX) |
 
-Run with a Hugging Face model ID from the table or a local checkpoint directory. Set `WEPM_MODEL` in the examples or pass `--model` to the CLI. By default, the examples use `tencent/WePocketModel1.0-4B`.
+For Transformers and GGUF, use the corresponding Hugging Face model ID or a local checkpoint directory. Set `WEPM_MODEL` in the examples or pass `--model` to the CLI. By default, the examples use `tencent/WePocketModel1.0-4B`. MLX uses the self-contained runtime shipped in its Hugging Face repository; see [MLX on Apple silicon](#mlx-on-apple-silicon).
 
 ### Quick start
 
@@ -160,6 +162,35 @@ WEPM_MODEL=tencent/WePocketModel1.0-4B-GGUF bash examples/cpu/generation/run.sh 
 ```
 
 The first run with a Hugging Face model ID downloads a complete snapshot into the Hub cache. To use a local copy, see the [checkpoint download instructions](checkpoints/README.md). The generation scripts also accept `single_image` and `interleaved`. See the [runnable examples](examples/README.md) for embeddings and decisions and the [inference guide](inference/README.md) for CLI flags, multimodal inputs, and raw training exports.
+
+### MLX on Apple silicon
+
+Use the runtime included in the corresponding Hugging Face repository. It supports generation, multimodal embeddings and structured decisions (JEV) on Apple silicon (M-series Macs). Use a separate environment from the PyTorch setup above.
+
+```bash
+python -m venv .venv-mlx
+source .venv-mlx/bin/activate
+python -m pip install huggingface_hub
+hf download tencent/WePocketModel1.0-2B-MLX --local-dir WePocketModel1.0-2B-MLX
+cd WePocketModel1.0-2B-MLX
+python -m pip install -r requirements.txt
+
+python runtime/infer_mlx.py --model . --task generate \
+  --prompt "Describe WePM in one sentence." \
+  --max-new-tokens 64 --output out/generation.json
+
+python runtime/infer_mlx.py --model . --task embed \
+  --prompt "Find similar landscape photos." \
+  --embedding-dim 1024 --output out/embedding.json
+
+python runtime/infer_mlx.py --model . --task decision \
+  --decision-json request.json \
+  --output out/decision.json
+```
+
+`request.json` follows the SystemOne protocol; [this example](examples/gpu/demo_data/decision/request.json) in the current repository can be used as a template, and the MLX model card documents the `choice` / `score` / `noul` variants.
+
+For 4B, replace `WePocketModel1.0-2B-MLX` with `WePocketModel1.0-4B-MLX` in the download command and directory name. Add `--image /path/to/image.jpg` to the generation or embedding command for image input. The MLX model repositories include pinned dependencies and detailed usage instructions; this runtime is separate from this repository's Transformers/GGUF CLI.
 
 ### Hardware and precision (4B)
 
